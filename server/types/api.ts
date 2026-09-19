@@ -1,5 +1,6 @@
 /**
- * AGIES ALERT - Backend API Response & Schema Types
+ * AEGIS ALERT - Backend API Response & Schema Types
+ * Strict standard JSON schema contract for all endpoints.
  */
 
 export interface ApiResponse<T = any> {

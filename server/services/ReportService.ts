@@ -1,6 +1,6 @@
 /**
- * AGIES ALERT - Backend ReportService
- * Handles citizen incident reporting, verification workflows, and media object uploads with strict server-side validation.
+ * AEGIS ALERT - Backend ReportService
+ * Handles citizen disaster reporting, verification workflows, and media attachment references with strict server-side validation.
  */
 
 import { IncidentReportSubmission } from '../types/api';
@@ -38,7 +38,7 @@ export class ReportService {
   private static reports: IncidentReportRecord[] = [
     {
       id: 'rep-001',
-      trackingId: 'AGIES-REP-894215',
+      trackingId: 'AEGIS-REP-894215',
       hazardType: 'Flood',
       title: 'Waterlogging & Vehicle Submersion at Underpass',
       description: 'Water level reached 3 feet inside the subway. Two vehicles stalled, traffic completely halted.',
@@ -58,7 +58,7 @@ export class ReportService {
     },
     {
       id: 'rep-002',
-      trackingId: 'AGIES-REP-641209',
+      trackingId: 'AEGIS-REP-641209',
       hazardType: 'Road Blockage',
       title: 'Large Banyan Tree Uprooted over Arterial Highway',
       description: 'Heavy wind gust brought down an ancient tree across both northbound lanes, damaging power cables.',
@@ -85,7 +85,7 @@ export class ReportService {
     submission: IncidentReportSubmission,
     clientIp: string = '127.0.0.1'
   ): Promise<IncidentReportRecord> {
-    const trackingId = `AGIES-REP-${Math.floor(100000 + Math.random() * 900000)}`;
+    const trackingId = `AEGIS-REP-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const newRecord: IncidentReportRecord = {
       id: `rep-${Date.now()}`,

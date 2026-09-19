@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Geocoding Provider Implementations
+ * AEGIS ALERT - Geocoding Provider Implementations
  * Live Provider: OpenStreetMap Nominatim / BigDataCloud Geocoding API
  * Demo Provider: Structured Indian Cities & Districts Registry
  */
@@ -33,7 +33,7 @@ export class LiveGeocodingProvider implements IGeocodingProvider {
       const res = await fetch(url, {
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'AGIES-Alert-Disaster-Management-System/2.0',
+          'User-Agent': 'AEGIS-Alert-Disaster-Management-System/2.0',
         },
         signal: controller.signal,
       });
@@ -149,7 +149,7 @@ export class DemoGeocodingProvider implements IGeocodingProvider {
     return {
       data: matched,
       mode: 'DEMO',
-      sourceName: 'AGIES Static Indian Cities & Districts Registry',
+      sourceName: 'AEGIS Static Indian Cities & Districts Registry',
       sourceAuthority: 'NDMA Mock Training & GIS Dataset',
       isLive: false,
       timestamp: 'Simulated Data',
@@ -182,7 +182,7 @@ export class DemoGeocodingProvider implements IGeocodingProvider {
         confidenceScore: 88,
       },
       mode: 'DEMO',
-      sourceName: 'AGIES Nearest-Station Geodesic Model',
+      sourceName: 'AEGIS Nearest-Station Geodesic Model',
       sourceAuthority: 'NDMA Mock Training & Drill Registry',
       isLive: false,
       timestamp: 'Simulated Data',

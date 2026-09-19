@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Satellite Provider Implementations
+ * AEGIS ALERT - Satellite Provider Implementations
  * Live Provider: ISRO MOSDAC (Meteorological and Oceanographic Satellite Data Archival Centre) INSAT-3D/3DR
  * Demo Provider: Structured Geostationary Earth Observation Simulation Dataset
  */
@@ -64,7 +64,7 @@ export class DemoSatelliteProvider implements ISatelliteProvider {
     return {
       data: telemetry,
       mode: 'DEMO',
-      sourceName: 'AGIES Static Satellite Imagery Archive',
+      sourceName: 'AEGIS Static Satellite Imagery Archive',
       sourceAuthority: 'NDMA Mock Training & Earth Observation Dataset',
       isLive: false,
       timestamp: 'Simulated Data',

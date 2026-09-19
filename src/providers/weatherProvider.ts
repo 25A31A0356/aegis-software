@@ -1,7 +1,8 @@
 /**
- * AGIES ALERT - Weather Provider Implementations
- * Live Provider: Connects to Open-Meteo & IMD Telemetry API
- * Demo Provider: Uses verified historical Indian disaster baseline datasets
+ * AEGIS ALERT - Weather Provider Implementations
+ * Dual-layer Weather Data Architecture:
+ * - Live: Open-Meteo & IMD Telemetry API
+ * - Demo: Realistic NDMA disaster training simulation baselines
  */
 
 import { IWeatherProvider, ProviderResult } from './types';
@@ -88,7 +89,7 @@ export class DemoWeatherProvider implements IWeatherProvider {
     return {
       data: { ...demo, coordinates: [lat, lng], cityName: 'Monitored Sector (Simulation)' },
       mode: 'DEMO',
-      sourceName: 'AGIES Historical Disaster Baseline Scenario',
+      sourceName: 'AEGIS Historical Disaster Baseline Scenario',
       sourceAuthority: 'NDMA Mock Training & Drill Dataset',
       isLive: false,
       timestamp: 'Simulated Data',
@@ -102,7 +103,7 @@ export class DemoWeatherProvider implements IWeatherProvider {
     return {
       data: demo,
       mode: 'DEMO',
-      sourceName: 'AGIES Static Weather Simulation Grid',
+      sourceName: 'AEGIS Static Weather Simulation Grid',
       sourceAuthority: 'NDMA Mock Training Dataset',
       isLive: false,
       timestamp: 'Simulated Data',

@@ -1,6 +1,6 @@
 /**
- * AGIES ALERT - Backend RiskService
- * Calculates composite multi-hazard risk indices (0-100) based on real-time vulnerabilities and telemetry.
+ * AEGIS ALERT - Backend RiskService
+ * Calculates composite risk index (0-100) from multi-factor weather and hazard vectors.
  */
 
 export interface RiskEvaluationPayload {

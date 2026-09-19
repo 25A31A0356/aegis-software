@@ -1,0 +1,78 @@
+"""
+AEGIS UNIFIED DATA CORE - Core Configuration
+"""
+from typing import List, Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+    PROJECT_NAME: str = "AEGIS UNIFIED DATA CORE"
+    VERSION: str = "1.0.0"
+    API_V1_STR: str = "/api/v1"
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = False
+
+    # Server binding
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+
+    # CORS
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+    ]
+
+    # Database & Storage
+    # Default to PostgreSQL, with fallback for local test sqlite if needed
+    DATABASE_URL: str = "postgresql+asyncpg://aegis_user:aegis_secure_password_2026@localhost:5432/aegis_db"
+    DATABASE_SYNC_URL: Optional[str] = "postgresql://aegis_user:aegis_secure_password_2026@localhost:5432/aegis_db"
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+
+    # Redis Cache & Broker
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CACHE_DEFAULT_TTL_SEC: int = 300  # 5 minutes
+
+    # Security & Encryption
+    # AEGIS_SECRET_KEY used for AES/Fernet encryption of provider API keys at rest
+    AEGIS_SECRET_KEY: str = "aegis_master_encryption_key_32_bytes_min_2026!"
+    JWT_SECRET: str = "aegis_jwt_super_secret_signing_key_production_2026"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+
+    # Admin Default Credentials (bootstrapped securely on startup if not present)
+    DEFAULT_ADMIN_EMAIL: str = "admin@aegis.gov.in"
+    DEFAULT_ADMIN_PASSWORD: str = "AegisAdmin@2026!"
+
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = 120
+
+    # SSRF & Outbound HTTP Security
+    SSRF_PROTECTION_ENABLED: bool = True
+    HTTP_TIMEOUT_SECONDS: float = 15.0
+    HTTP_MAX_RETRIES: int = 3
+
+    # External Provider Credentials (Encrypted at rest once ingested into PostgreSQL)
+    NASA_FIRMS_MAP_KEY: Optional[str] = ""
+    IMD_API_KEY: Optional[str] = ""
+    CWC_API_KEY: Optional[str] = ""
+    CPCB_API_KEY: Optional[str] = ""
+    OPEN_METEO_API_KEY: Optional[str] = ""
+    MAPS_ROUTING_KEY: Optional[str] = ""
+    GEMINI_API_KEY: Optional[str] = ""
+
+    # Scheduler & Ingestion
+    ENABLE_BACKGROUND_SCHEDULER: bool = True
+    DEFAULT_INGESTION_INTERVAL_MINUTES: int = 5
+
+
+settings = Settings()

@@ -299,60 +299,85 @@ All intelligence bulletins and warnings credit verified sources:
 
 ---
 
+## ⚡ AEGIS Unified Data Core (Backend Infrastructure)
+
+AEGIS features a decoupled, production-ready Python/FastAPI data backbone:
+
+- **Authoritative Ingestion**: Live adapters for **IMD**, **CWC**, **INCOIS**, **USGS**, **NASA FIRMS**, **CPCB**, and **Open-Meteo**.
+- **Dynamic Field Detection**: Automated heuristic semantic classification of arbitrary JSON payloads with confidence scoring.
+- **Physical Unit Normalization**: Automatic conversion across metric & imperial units (°F $\to$ °C, mph $\to$ km/h, in $\to$ mm, hPa $\to$ Pa).
+- **Physics-Based Validation & Deduplication**: Real-time range enforcement and Haversine spatial-temporal deduplication.
+- **Multi-Source Spatial Correlation**: Compound threat level calculation fusing heavy rainfall with upstream river flood stages.
+- **Explicit Data Provenance**: Strict segregation of `[RAW_OBSERVATION]`, `[NORMALIZED_OBSERVATION]`, and `[AI_GENERATED]` data.
+- **Hardened Security**: SSRF Guard (blocking RFC 1918 & cloud metadata IPs), AES-256 Fernet Secret Vault, and deterministic key masking (`****************AB92`).
+
+### Detailed Technical Documentation:
+- 📖 [Architecture & Pipeline Design](docs/architecture.md)
+- 📡 [Data Providers & Normalization Specs](docs/providers.md)
+- 🗄️ [Data Models & PostgreSQL Schemas](docs/data-model.md)
+- 🛡️ [Security & Hardening Guide](docs/security.md)
+- 🔌 [REST API v1 Reference](docs/api.md)
+- 🚀 [Deployment & Operations Guide](docs/deployment.md)
+
+---
+
 ## 🚀 Getting Started & Installation
 
-### Prerequisites
-- **Node.js**: Version `18.0.0` or higher
-- **npm**: Version `9.0.0` or higher (or `pnpm` / `yarn`)
-
-### Quick Setup
-
+### Quick Launch with Docker Compose (Full Stack)
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/25A31A0356/Aegis-web.git
+cd "Aegis software"
 
-# 2. Navigate to the project root
-cd Aegis-web
+# Launch PostgreSQL (PostGIS), Redis, FastAPI Backend, and React Frontend
+docker compose up -d --build
+```
+- Frontend UI: `http://localhost:5173`
+- Backend REST API: `http://localhost:8000/api/v1/`
+- Interactive Swagger Docs: `http://localhost:8000/docs`
 
-# 3. Install dependencies
-npm install
+### Manual Local Development Setup
 
-# 4. Launch the local development server
-npm run dev
+#### 1. Backend Setup
+```bash
+cd backend
+python -m venv venv
+# Windows: .\venv\Scripts\activate | Linux/macOS: source venv/bin/activate
+pip install -r requirements.txt
+pytest tests/
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The web application will be accessible at:
-👉 **`http://localhost:5173`** (or `http://localhost:5174`)
+#### 2. Frontend Setup
+```bash
+# In root directory:
+npm install
+npm run dev
+```
 
 ---
 
 ## 🛠️ Available Scripts
 
-| Script | Command | Purpose |
-| :--- | :--- | :--- |
-| **`npm run dev`** | `vite` | Starts the local Vite development server with Hot Module Replacement (HMR) |
-| **`npm run build`** | `tsc -b && vite build` | Runs full TypeScript typechecking and compiles optimized production assets |
-| **`npm run preview`** | `vite preview` | Serves the production build locally for pre-deployment testing |
+| Script / Command | Purpose |
+| :--- | :--- |
+| **`npm run dev`** | Starts local Vite development server with backend middleware proxy |
+| **`npm run build`** | Runs full TypeScript compile & production Vite asset bundle |
+| **`python -m pytest backend/tests`** | Executes 24 unit & integration test suites for Data Core |
+| **`docker compose up --build`** | Launches multi-container production stack |
 
 ---
 
 ## 🔒 Security, Privacy & Data Protection
 
-- **Client-Side Hardware Keystore Encryption**: User medical summaries, blood group data, and emergency contact phone numbers are stored locally via encrypted storage adapters without unencrypted cloud transmission.
-- **Privacy-Masked Telemetry**: Caller phone numbers and personal identities in public SOS feeds are masked (e.g., `+91 98765 *****`) to prevent unauthorized exposure.
-- **Strict Content Security**: Clean separation of map vector layers with zero external script injections.
+- **SSRF Guard Protection**: Every outbound request is filtered to prevent SSRF against loopback, private subnets, and cloud instance metadata (`169.254.169.254`).
+- **Fernet AES-256 Secret Vault**: API tokens and private provider keys are encrypted at rest and never returned in plaintext.
+- **Privacy-Masked Telemetry**: Sensitive keys and identifiers are masked (`****************AB92`).
+- **Immutable Audit Trail**: All administrative actions and pipeline executions are recorded with actor and IP stamps.
 
 ---
 
 ## 🤝 Contributing & License
-
-Contributions, feature suggestions, and pull requests for disaster preparedness improvements are warmly welcome!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'feat: add new disaster layer'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 Distributed under the **MIT License**. See `LICENSE` for more information.
 

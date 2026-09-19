@@ -1,12 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { agiesBackendPlugin } from './server/vitePlugin';
+import { aegisBackendPlugin } from './server/vitePlugin';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [react(), agiesBackendPlugin()],
+  plugins: [react(), aegisBackendPlugin()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

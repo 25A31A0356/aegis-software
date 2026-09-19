@@ -1,5 +1,7 @@
 /**
- * AGIES ALERT - Disaster Alerts Provider Implementations
+ * AEGIS ALERT - Disaster Alerts Provider Implementations
+ * Live Provider: National Disaster Management Authority (NDMA) & SACHET CAP Feed
+ * Demo Provider: Structured Multi-Hazard Simulation Dataset
  */
 
 import { IDisasterAlertsProvider, ProviderResult } from './types';
@@ -60,7 +62,7 @@ export class DemoAlertsProvider implements IDisasterAlertsProvider {
     return {
       data: hazards,
       mode: 'DEMO',
-      sourceName: 'AGIES Mock Disaster Scenario Dataset',
+      sourceName: 'AEGIS Mock Disaster Scenario Dataset',
       sourceAuthority: 'NDMA Mock Training & Drill Registry',
       isLive: false,
       timestamp: 'Simulated Data',
@@ -73,7 +75,7 @@ export class DemoAlertsProvider implements IDisasterAlertsProvider {
     return {
       data: hazards,
       mode: 'DEMO',
-      sourceName: 'AGIES Mock Disaster Scenario Dataset',
+      sourceName: 'AEGIS Mock Disaster Scenario Dataset',
       sourceAuthority: 'NDMA Mock Training & Drill Registry',
       isLive: false,
       timestamp: 'Simulated Data',

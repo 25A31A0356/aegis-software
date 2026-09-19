@@ -8,17 +8,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        // AGIES ALERT Official Design Tokens
-        'agies-dark': '#075B8A',     // Primary Dark Blue
-        'agies-blue': '#0B6E9E',     // Primary Blue
-        'agies-cyan': '#18C3D0',     // Cyan Accent
-        'agies-red': '#E94B68',      // Alert Red
-        'agies-yellow': '#F4C84A',   // Warning Yellow
-        'agies-green': '#45C79A',    // Success Green
-        'agies-text': '#18364A',     // Primary Text
-        'agies-subtext': '#708696',  // Secondary Text
-        'agies-border': '#DCEBED',   // Subtle Border
-        'agies-bg': '#F4F8FA',       // Pale Blue/White Background
+        // AEGIS ALERT Official Design Tokens
+        'aegis-dark': '#075B8A',     // Primary Dark Blue
+        'aegis-blue': '#0B6E9E',     // Primary Blue
+        'aegis-cyan': '#18C3D0',     // Cyan Accent
+        'aegis-red': '#E94B68',      // Alert Red
+        'aegis-yellow': '#F4C84A',   // Warning Yellow
+        'aegis-green': '#45C79A',    // Success Green
+        'aegis-text': '#18364A',     // Primary Text
+        'aegis-subtext': '#708696',  // Secondary Text
+        'aegis-border': '#DCEBED',   // Subtle Border
+        'aegis-bg': '#F4F8FA',       // Pale Blue/White Background
+
+        // Backward compatibility aliases
+        'agies-dark': '#075B8A',
+        'agies-blue': '#0B6E9E',
+        'agies-cyan': '#18C3D0',
+        'agies-red': '#E94B68',
+        'agies-yellow': '#F4C84A',
+        'agies-green': '#45C79A',
+        'agies-text': '#18364A',
+        'agies-subtext': '#708696',
+        'agies-border': '#DCEBED',
+        'agies-bg': '#F4F8FA',
 
         // Extended Surface & Hazard Shades
         background: '#F4F8FA',

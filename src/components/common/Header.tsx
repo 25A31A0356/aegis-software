@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { useProfile } from '../../context/ProfileContext';
-import { AGIES_TOKENS } from '../../theme/tokens';
+import { AEGIS_TOKENS } from '../../theme/tokens';
 import { DataStatusIndicator } from './DataStatusIndicator';
 
 interface HeaderProps {
@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EDFAFC] border border-[#AEEBF0] text-[#075B8A] text-[10px] font-mono font-bold tracking-wider uppercase">
               <span className="w-1.5 h-1.5 rounded-full bg-[#18C3D0] animate-pulse" />
-              <span>{AGIES_TOKENS.commandCenter}</span>
+              <span>{AEGIS_TOKENS.commandCenter}</span>
             </div>
             <h2 className="text-sm sm:text-base font-extrabold text-[#18364A] tracking-tight font-sans mt-0.5">
               {greeting}, <span className="text-[#075B8A]">{userName}</span>

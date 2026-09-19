@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Export Service
+ * AEGIS ALERT - Export Service
  * Handles real client-side export to CSV, printable PDF Report, and Word Document.
  */
 
@@ -43,7 +43,7 @@ export class ExportService {
     const csvContent =
       'data:text/csv;charset=utf-8,' +
       [
-        `"AGIES ALERT - HAZARD ANALYTICS INTELLIGENCE REPORT"`,
+        `"AEGIS ALERT - HAZARD ANALYTICS INTELLIGENCE REPORT"`,
         `"Location: ${payload.location} | Hazard: ${payload.hazard} | Period: ${payload.dateRange}"`,
         `"Generated: ${payload.generatedAt}"`,
         `"Peak Intensity: ${payload.stats.peakIntensity} | Total Events: ${payload.stats.totalEvents} | People Affected: ${payload.stats.peopleAffected} | Trend: ${payload.stats.trend}"`,
@@ -55,7 +55,7 @@ export class ExportService {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `AGIES_Analytics_${payload.location.replace(/\s+/g, '_')}_${Date.now()}.csv`);
+    link.setAttribute('download', `AEGIS_Analytics_${payload.location.replace(/\s+/g, '_')}_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -75,7 +75,7 @@ export class ExportService {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>AGIES ALERT - Hazard Analytics Briefing</title>
+        <title>AEGIS ALERT - Hazard Analytics Briefing</title>
         <style>
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; color: #18364A; background: #FFF; }
           .header { border-bottom: 2px solid #075B8A; padding-bottom: 15px; margin-bottom: 25px; }
@@ -96,7 +96,7 @@ export class ExportService {
       </head>
       <body>
         <div class="header">
-          <div class="logo">AGIES <span>ALERT</span></div>
+          <div class="logo">AEGIS <span>ALERT</span></div>
           <div class="subtitle">MULTI-HAZARD EARLY WARNING SYSTEM • SECURE COMMAND INTELLIGENCE</div>
           <div style="margin-top: 10px;">
             <span class="badge">LOCATION: ${payload.location.toUpperCase()}</span>
@@ -151,7 +151,7 @@ export class ExportService {
         </table>
 
         <div class="footer">
-          Generated on ${payload.generatedAt} IST • AGIES Alert Disaster Analytics Engine
+          Generated on ${payload.generatedAt} IST • AEGIS Alert Disaster Analytics Engine
         </div>
         <script>
           window.onload = function() { window.print(); }
@@ -169,10 +169,10 @@ export class ExportService {
    */
   public static exportToWord(payload: ExportDataPayload): void {
     const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head><title>AGIES ALERT Analytics</title></head><body>`;
+    <head><title>AEGIS ALERT Analytics</title></head><body>`;
     const footer = `</body></html>`;
     const content = `
-      <h2>AGIES ALERT - HAZARD ANALYTICS REPORT</h2>
+      <h2>AEGIS ALERT - HAZARD ANALYTICS REPORT</h2>
       <p><strong>Location:</strong> ${payload.location} | <strong>Hazard:</strong> ${payload.hazard} | <strong>Period:</strong> ${payload.dateRange}</p>
       <p><strong>Generated At:</strong> ${payload.generatedAt}</p>
       <hr/>
@@ -201,7 +201,7 @@ export class ExportService {
     const blob = new Blob([header + content + footer], { type: 'application/msword' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `AGIES_Analytics_${payload.location.replace(/\s+/g, '_')}.doc`;
+    link.download = `AEGIS_Analytics_${payload.location.replace(/\s+/g, '_')}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

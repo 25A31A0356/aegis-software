@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Database,
 } from 'lucide-react';
 import { AGIES_TOKENS } from '../../theme/tokens';
 import { useDataProvider } from '../../context/DataProviderContext';
@@ -37,6 +38,7 @@ export const navItems: NavItem[] = [
   { id: 'safety', label: 'Safety', icon: ShieldCheck },
   { id: 'reports', label: 'Reports', icon: FileText },
   { id: 'live-map', label: 'Live Map', icon: Radio, badge: 'GIS' },
+  { id: 'datacore', label: 'Data Core', icon: Database, badge: 'v1' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({

@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Backend AuthService
+ * AEGIS ALERT - Backend AuthService
  * Handles token generation, credential verification, and session management.
  */
 
@@ -16,14 +16,14 @@ export class AuthService {
     const user: UserSession = {
       id: userId,
       name: credentials.email?.split('@')[0] || 'Verified Citizen',
-      email: credentials.email || 'citizen@agies.gov.in',
+      email: credentials.email || 'citizen@aegis.gov.in',
       role: (credentials.role as any) || 'citizen',
       phone: credentials.phone || '+91 98765 43210',
       stateId: 'MH',
       district: 'Mumbai Suburban',
     };
 
-    const token = `agies_jwt_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
+    const token = `aegis_jwt_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
     this.sessions.set(token, user);
 
     return { token, user };

@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Data Provider Inspector & Mode Switcher Modal
+ * AEGIS ALERT - Data Provider Inspector & Mode Switcher Modal
  * Displays real-time health, latency, authoritative sources, and controls for the 7 provider interfaces.
  */
 
@@ -62,7 +62,7 @@ export const DataModeModal: React.FC = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                AGIES Data-Provider Architecture
+                AEGIS Data-Provider Architecture
                 <span
                   className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
                     isLiveMode
@@ -141,7 +141,7 @@ export const DataModeModal: React.FC = () => {
               </span>{' '}
               {isLiveMode
                 ? 'All emergency alerts and weather observations are routed from certified external providers (IMD, CWC, NDMA CAP gateway, MOSDAC, Open-Meteo). Fallbacks gracefully transition to baseline with explicit notice.'
-                : 'AGIES Alert strictly separates simulated disaster drill datasets from real-world emergency broadcasts. All displayed parameters are for system training and interface verification.'}
+                : 'AEGIS Alert strictly separates simulated disaster drill datasets from real-world emergency broadcasts. All displayed parameters are for system training and interface verification.'}
             </div>
           </div>
         </div>

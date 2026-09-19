@@ -1,6 +1,6 @@
 /**
- * AGIES ALERT - Backend WeatherService
- * Aggregates Open-Meteo and IMD live meteorological telemetry.
+ * AEGIS ALERT - Backend WeatherService
+ * Coordinates live telemetry with local fallbacks and geocoding correlation.
  */
 
 export interface WeatherDataPayload {

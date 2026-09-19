@@ -33,11 +33,13 @@ interface ChatMessage {
   suggestedActions?: AISuggestedAction[];
 }
 
-interface FloatingAskAGIESProps {
+interface FloatingAskAEGISProps {
   activeTab?: string;
   selectedHazard?: string | null;
   onNavigate?: (tab: string) => void;
 }
+
+export type FloatingAskAGIESProps = FloatingAskAEGISProps;
 
 const SUGGESTED_PROMPTS = [
   'What is my current risk?',
@@ -48,7 +50,7 @@ const SUGGESTED_PROMPTS = [
   'Help me report an incident.',
 ];
 
-export const FloatingAskAGIES: React.FC<FloatingAskAGIESProps> = ({
+export const FloatingAskAEGIS: React.FC<FloatingAskAEGISProps> = ({
   activeTab = 'homepage',
   selectedHazard = null,
   onNavigate,
@@ -192,7 +194,7 @@ export const FloatingAskAGIES: React.FC<FloatingAskAGIESProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-extrabold text-sm tracking-wide text-white font-sans">
-                    AGIES AI
+                    AEGIS AI
                   </h3>
                   <DataStatusIndicator compact />
                 </div>
@@ -224,7 +226,7 @@ export const FloatingAskAGIES: React.FC<FloatingAskAGIESProps> = ({
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-                aria-label="Close Ask AGIES"
+                aria-label="Close Ask AEGIS"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -395,7 +397,7 @@ export const FloatingAskAGIES: React.FC<FloatingAskAGIESProps> = ({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="group relative flex items-center gap-2.5 px-4.5 py-3 rounded-full bg-[#18C3D0] hover:bg-[#15B0BC] text-[#075B8A] shadow-float border-2 border-white/60 transition-all duration-200 active:scale-95 hover:shadow-xl cursor-pointer"
-        aria-label="Toggle Ask AGIES Disaster AI"
+        aria-label="Toggle Ask AEGIS Disaster AI"
       >
         <div className="relative flex items-center justify-center">
           <MessageSquare className="w-5 h-5 text-[#075B8A] fill-current" />
@@ -406,9 +408,12 @@ export const FloatingAskAGIES: React.FC<FloatingAskAGIESProps> = ({
           </span>
         </div>
         <span className="font-extrabold text-xs tracking-wider uppercase font-sans text-[#075B8A]">
-          Ask AGIES
+          Ask AEGIS
         </span>
       </button>
     </div>
   );
 };
+
+export const FloatingAskAGIES = FloatingAskAEGIS;
+

@@ -1,5 +1,5 @@
 /**
- * AGIES AI Service - Context-Aware Disaster & Safety Assistant
+ * AEGIS AI Service - Context-Aware Disaster & Safety Assistant
  * Handles contextual prompts, live telemetry grounding, authoritative safety protocols, and API communication.
  */
 
@@ -107,11 +107,11 @@ class AIServiceClass {
       const isLive = ctx.dataMode === 'LIVE';
       return {
         answer: isLive
-          ? `🟢 **AGIES ALERT is Operating in LIVE MODE**:\n\n• **Active Providers**: 7 Authoritative Streams Connected\n• **Weather Telemetry**: India Meteorological Department (IMD) & Open-Meteo\n• **Early Warnings & Alerts**: National Disaster Management Authority (NDMA) & CWC\n• **Geocoding & GIS**: OpenStreetMap & Survey of India Spatial Reference\n• **Doppler Radar & Satellite**: IMD DWR Network & ISRO MOSDAC INSAT-3DR\n• **Lightning Detection**: IITM Damini Lightning Sensor Array\n\nAll emergency alerts and weather observations reflect verified, real-world conditions.`
-          : `⚠️ **AGIES ALERT is Operating in DEMO MODE**:\n\n• **Simulation Dataset**: Structured NDMA Disaster Drill Scenario & Historical Baselines\n• **Notice**: In strict accordance with AGIES safety architecture, demo data is **never** silently presented as real emergency information.\n• **Toggle**: You can switch to **LIVE MODE** anytime by clicking the Data Status indicator badge in the top bar or inside the modal.`,
+          ? `🟢 **AEGIS ALERT is Operating in LIVE MODE**:\n\n• **Active Providers**: 7 Authoritative Streams Connected\n• **Weather Telemetry**: India Meteorological Department (IMD) & Open-Meteo\n• **Early Warnings & Alerts**: National Disaster Management Authority (NDMA) & CWC\n• **Geocoding & GIS**: OpenStreetMap & Survey of India Spatial Reference\n• **Doppler Radar & Satellite**: IMD DWR Network & ISRO MOSDAC INSAT-3DR\n• **Lightning Detection**: IITM Damini Lightning Sensor Array\n\nAll emergency alerts and weather observations reflect verified, real-world conditions.`
+          : `⚠️ **AEGIS ALERT is Operating in DEMO MODE**:\n\n• **Simulation Dataset**: Structured NDMA Disaster Drill Scenario & Historical Baselines\n• **Notice**: In strict accordance with AEGIS safety architecture, demo data is **never** silently presented as real emergency information.\n• **Toggle**: You can switch to **LIVE MODE** anytime by clicking the Data Status indicator badge in the top bar or inside the modal.`,
         sources: isLive
           ? ['IMD Realtime Grid', 'ISRO MOSDAC', 'NDMA CAP India Gateway']
-          : ['NDMA Simulation Dataset', 'AGIES Mock Disaster Registry'],
+          : ['NDMA Simulation Dataset', 'AEGIS Mock Disaster Registry'],
         safetyLevel: 'NORMAL',
         suggestedActions: [
           { label: isLive ? 'View Active GIS Map' : 'Switch to Live Mode', actionTab: 'live-map', actionType: 'navigate' },
@@ -200,8 +200,8 @@ class AIServiceClass {
     // 6. Report Incident Help
     if (q.includes('report') || q.includes('submit incident') || q.includes('file report') || q.includes('blocked road') || q.includes('fire report')) {
       return {
-        answer: `📝 **How to Report a Live Incident on AGIES ALERT**:\n\n1. Go to the **Reports** page.\n2. **Select Hazard**: Choose from 9 hazard categories (Flood, Fire, Landslide, Road Blockage, etc.).\n3. **GPS Location**: Allow GPS to pinpoint your exact coordinates or adjust the pin on the map.\n4. **Media Evidence**: Take a photo or upload video from your device camera.\n5. **Severity & Submit**: Select severity level and casualties to generate a verified incident tracking ID (e.g. \`AGIES-REP-XXXXXX\`).`,
-        sources: ['National Incident Reporting Framework', 'AGIES Citizen Incident Service'],
+        answer: `📝 **How to Report a Live Incident on AEGIS ALERT**:\n\n1. Go to the **Reports** page.\n2. **Select Hazard**: Choose from 9 hazard categories (Flood, Fire, Landslide, Road Blockage, etc.).\n3. **GPS Location**: Allow GPS to pinpoint your exact coordinates or adjust the pin on the map.\n4. **Media Evidence**: Take a photo or upload video from your device camera.\n5. **Severity & Submit**: Select severity level and casualties to generate a verified incident tracking ID (e.g. \`AEGIS-REP-XXXXXX\`).`,
+        sources: ['National Incident Reporting Framework', 'AEGIS Citizen Incident Service'],
         safetyLevel: 'NORMAL',
         suggestedActions: [
           { label: 'Report an Incident Now', actionTab: 'reports', actionType: 'navigate' },
@@ -258,7 +258,7 @@ class AIServiceClass {
 
     // Default Fallback
     return {
-      answer: `Hello! I am **Ask AGIES**, your AI disaster safety assistant for **${loc}**.\n\nCurrently, your region has an active risk rating of **${risk.score}/100 (${risk.level})** with **${weather.condition} (${weather.temperature}°C)**.\n\nHow can I help you stay safe? You can ask me:\n• *"What is my current risk?"*\n• *"What should I do during a flood?"*\n• *"Find nearby safe places."*\n• *"What does this radar layer mean?"*\n• *"Help me report an incident."*`,
+      answer: `Hello! I am **Ask AEGIS**, your AI disaster safety assistant for **${loc}**.\n\nCurrently, your region has an active risk rating of **${risk.score}/100 (${risk.level})** with **${weather.condition} (${weather.temperature}°C)**.\n\nHow can I help you stay safe? You can ask me:\n• *"What is my current risk?"*\n• *"What should I do during a flood?"*\n• *"Find nearby safe places."*\n• *"What does this radar layer mean?"*\n• *"Help me report an incident."*`,
       sources: AUTHORITATIVE_SOURCES,
       safetyLevel: 'NORMAL',
       suggestedActions: [

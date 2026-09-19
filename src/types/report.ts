@@ -15,7 +15,7 @@ export type ReportStatus = 'pending_review' | 'verified' | 'dispatched' | 'resol
 
 export interface ReportMediaItem {
   id: string;
-  mediaReference: string; // Object storage bucket key e.g. "s3://agies-media/2026/09/rep-xxx.jpg"
+  mediaReference: string; // Object storage bucket key e.g. "s3://aegis-media/2026/09/rep-xxx.jpg"
   url: string; // Preview data URL or CDN URL
   fileType: 'image/jpeg' | 'image/png' | 'video/mp4' | 'video/quicktime' | string;
   fileSize: number; // in bytes

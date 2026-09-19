@@ -73,5 +73,5 @@ export const DEFAULT_EMERGENCY_PROFILE: EmergencyProfile = {
   peopleCount: 3,
   familyContacts: DEFAULT_FAMILY_CONTACTS,
   customSosMessage: 'EMERGENCY SOS: I need immediate help! Please dispatch rescue to my location.',
-  customSafeMessage: 'I am safe and secure. Sharing my location with family through AGIES ALERT.',
+  customSafeMessage: 'I am safe and secure. Sharing my location with family through AEGIS ALERT.',
 };

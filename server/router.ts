@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Unified Backend Request Router
+ * AEGIS ALERT - Unified Backend Request Router
  * Dispatches all REST endpoints with rate limiting, auth checks, schema validation, and proper HTTP status codes.
  */
 
@@ -108,7 +108,7 @@ export async function handleBackendApiRequest(req: HttpRequestContext): Promise<
       return {
         status: res.status,
         headers: attachHeaders({
-          'Set-Cookie': SecurityMiddleware.getSecureCookieString('agies_csrf', csrfToken, 14400),
+          'Set-Cookie': SecurityMiddleware.getSecureCookieString('aegis_csrf', csrfToken, 14400),
         }),
         body: res.body,
       };
@@ -138,7 +138,7 @@ export async function handleBackendApiRequest(req: HttpRequestContext): Promise<
       return {
         status: res.status,
         headers: attachHeaders({
-          'Set-Cookie': SecurityMiddleware.getSecureCookieString('agies_session', loginResult.token, 86400),
+          'Set-Cookie': SecurityMiddleware.getSecureCookieString('aegis_session', loginResult.token, 86400),
         }),
         body: res.body,
       };
@@ -432,12 +432,12 @@ export async function handleBackendApiRequest(req: HttpRequestContext): Promise<
     // Route Not Found (404)
     const notFoundErr = ErrorHandler.createError(
       'ROUTE_NOT_FOUND',
-      `The requested endpoint ${method} ${path} does not exist on AGIES ALERT backend.`,
+      `The requested endpoint ${method} ${path} does not exist on AEGIS ALERT backend.`,
       404
     );
     return { status: notFoundErr.status, headers: attachHeaders(), body: notFoundErr.body };
   } catch (serverErr: any) {
-    console.error('[AGIES Backend Error]', serverErr);
+    console.error('[AEGIS Backend Error]', serverErr);
     // Redact stack traces and internal secrets from error response
     const internalErr = ErrorHandler.createError(
       'INTERNAL_SERVER_ERROR',

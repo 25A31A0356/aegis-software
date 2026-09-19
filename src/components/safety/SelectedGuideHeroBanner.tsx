@@ -20,7 +20,9 @@ export const SelectedGuideHeroBanner: React.FC<SelectedGuideHeroBannerProps> = (
   useEffect(() => {
     // Check local storage persistence
     try {
-      const savedGuides = JSON.parse(localStorage.getItem('agies_saved_guides') || '[]');
+      const savedGuides = JSON.parse(
+        localStorage.getItem('aegis_saved_guides') || localStorage.getItem('agies_saved_guides') || '[]'
+      );
       setIsSaved(savedGuides.includes(guide.id));
     } catch {
       setIsSaved(false);
@@ -29,7 +31,9 @@ export const SelectedGuideHeroBanner: React.FC<SelectedGuideHeroBannerProps> = (
 
   const handleToggleSave = () => {
     try {
-      const savedGuides: string[] = JSON.parse(localStorage.getItem('agies_saved_guides') || '[]');
+      const savedGuides: string[] = JSON.parse(
+        localStorage.getItem('aegis_saved_guides') || localStorage.getItem('agies_saved_guides') || '[]'
+      );
       let updated: string[] = [];
       if (savedGuides.includes(guide.id)) {
         updated = savedGuides.filter((id) => id !== guide.id);
@@ -38,7 +42,7 @@ export const SelectedGuideHeroBanner: React.FC<SelectedGuideHeroBannerProps> = (
         updated = [...savedGuides, guide.id];
         setIsSaved(true);
       }
-      localStorage.setItem('agies_saved_guides', JSON.stringify(updated));
+      localStorage.setItem('aegis_saved_guides', JSON.stringify(updated));
     } catch {
       setIsSaved(!isSaved);
     }

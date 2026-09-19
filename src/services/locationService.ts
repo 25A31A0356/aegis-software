@@ -1,6 +1,6 @@
 /**
- * AGIES Shared Location Service
- * Centralized location system for Homepage, Analytics, Safety, Reports, Live Map, and Ask AGIES.
+ * AEGIS Shared Location Service
+ * Centralized location system for Homepage, Analytics, Safety, Reports, Live Map, and Ask AEGIS.
  */
 
 export interface LocationCoordinates {
@@ -71,7 +71,7 @@ export interface GeolocationResult {
   };
 }
 
-const STORAGE_KEY = 'agies_saved_locations_v1';
+const STORAGE_KEY = 'aegis_saved_locations_v1';
 
 export const INDIAN_CITIES_REGISTRY: LocationSearchResult[] = [
   { id: 'city-mumbai', name: 'Mumbai', stateName: 'Maharashtra', district: 'Mumbai Suburban', stateId: 'MH', coordinates: [19.0760, 72.8777], riskScore: 78, riskLevel: 'High', weatherSnippet: '31°C • Heavy Showers' },
@@ -147,7 +147,7 @@ class LocationServiceClass {
   private loadFromStorage() {
     try {
       if (typeof localStorage !== 'undefined') {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('agies_saved_locations_v1');
         if (stored) {
           this.savedLocations = JSON.parse(stored);
         } else {

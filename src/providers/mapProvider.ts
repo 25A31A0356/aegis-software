@@ -1,7 +1,7 @@
 /**
- * AGIES ALERT - Map Provider Implementations
- * Live Provider: Authoritative GIS Tile Servers (OpenStreetMap, Esri Satellite, CartoDB Dark, OpenTopoMap)
- * Demo Provider: Baseline Simulated GIS Layers
+ * AEGIS ALERT - Map Provider Implementations
+ * Live Provider: OpenStreetMap, Esri Satellite, CartoDB Positron/Dark, OpenTopoMap
+ * Demo Provider: Static Simulation Basemap tiles
  */
 
 import { IMapProvider, TileLayerConfig, ProviderResult } from './types';
@@ -79,7 +79,7 @@ export class LiveMapProvider implements IMapProvider {
     return {
       data: Object.values(TILE_LAYERS),
       mode: 'LIVE',
-      sourceName: 'AGIES Multi-Source GIS Basemap Stack',
+      sourceName: 'AEGIS Multi-Source GIS Basemap Stack',
       sourceAuthority: 'Survey of India / OpenStreetMap / Esri',
       isLive: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -95,7 +95,7 @@ export class DemoMapProvider implements IMapProvider {
     return {
       data: config,
       mode: 'DEMO',
-      sourceName: 'AGIES Static Basemap Simulation Layer',
+      sourceName: 'AEGIS Static Basemap Simulation Layer',
       sourceAuthority: 'NDMA Mock Training & Drill Registry',
       isLive: false,
       timestamp: 'Simulated Data',
@@ -107,7 +107,7 @@ export class DemoMapProvider implements IMapProvider {
     return {
       data: Object.values(TILE_LAYERS),
       mode: 'DEMO',
-      sourceName: 'AGIES Static Basemap Simulation Layer',
+      sourceName: 'AEGIS Static Basemap Simulation Layer',
       sourceAuthority: 'NDMA Mock Training & Drill Registry',
       isLive: false,
       timestamp: 'Simulated Data',

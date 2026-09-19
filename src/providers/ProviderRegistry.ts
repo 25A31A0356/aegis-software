@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Central Provider Registry & Mode Manager
+ * AEGIS ALERT - Central Provider Registry & Mode Manager
  * Orchestrates Weather, Alerts, Geocoding, Maps, Radar, Satellite, and Lightning providers.
  * Supports runtime switching and environment configuration (DATA_MODE=demo | DATA_MODE=live).
  */
@@ -23,7 +23,7 @@ import { LiveRadarProvider, DemoRadarProvider } from './radarProvider';
 import { LiveSatelliteProvider, DemoSatelliteProvider } from './satelliteProvider';
 import { LiveLightningProvider, DemoLightningProvider } from './lightningProvider';
 
-const STORAGE_MODE_KEY = 'agies_data_mode_v1';
+const STORAGE_MODE_KEY = 'aegis_data_mode_v1';
 
 class ProviderRegistryClass {
   private currentMode: DataMode = 'DEMO';
@@ -65,7 +65,7 @@ class ProviderRegistryClass {
 
     // 2. Check localStorage
     try {
-      const stored = localStorage.getItem(STORAGE_MODE_KEY);
+      const stored = localStorage.getItem(STORAGE_MODE_KEY) || localStorage.getItem('agies_data_mode_v1');
       if (stored === 'LIVE' || stored === 'DEMO') {
         this.currentMode = stored;
         return;

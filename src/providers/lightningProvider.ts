@@ -1,7 +1,7 @@
 /**
- * AGIES ALERT - Lightning Provider Implementations
- * Live Provider: IITM Damini Lightning Detection Sensor Network & Earth Networks RF Grid
- * Demo Provider: Structured Atmospheric Electrostatic Discharge Simulation Dataset
+ * AEGIS ALERT - Lightning Provider Implementations
+ * Live Provider: IITM Damini Lightning Sensor Array & Blitzortung Real-time Sferics Feed
+ * Demo Provider: Structured Ground Flash Density Simulation Dataset
  */
 
 import { ILightningProvider, LightningStrikeEvent, ProviderResult } from './types';
@@ -123,7 +123,7 @@ export class DemoLightningProvider implements ILightningProvider {
     return {
       data: demoStrikes,
       mode: 'DEMO',
-      sourceName: 'AGIES Static Lightning Flash Simulation Dataset',
+      sourceName: 'AEGIS Static Lightning Flash Simulation Dataset',
       sourceAuthority: 'NDMA Mock Training & Electrostatic Grid',
       isLive: false,
       timestamp: 'Simulated Data',

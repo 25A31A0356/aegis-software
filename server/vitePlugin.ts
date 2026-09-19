@@ -1,14 +1,14 @@
 /**
- * AGIES ALERT - Vite Backend Middleware Plugin
- * Connects the real backend router to the Vite development and preview server.
+ * AEGIS ALERT - Vite Backend Middleware Plugin
+ * Connects the real backend router / FastAPI proxy to the Vite development and preview server.
  */
 
 import { Plugin } from 'vite';
 import { handleBackendApiRequest, HttpRequestContext } from './router';
 
-export function agiesBackendPlugin(): Plugin {
+export function aegisBackendPlugin(): Plugin {
   return {
-    name: 'agies-alert-backend',
+    name: 'aegis-alert-backend',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const urlStr = req.url || '';
@@ -45,6 +45,49 @@ export function agiesBackendPlugin(): Plugin {
           });
         }
 
+        // First: Attempt to forward request to real FastAPI Data Core backend at http://127.0.0.1:8000
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          
+          let fetchBody: any = undefined;
+          if (body !== undefined && req.method !== 'GET' && req.method !== 'HEAD') {
+            fetchBody = typeof body === 'string' ? body : JSON.stringify(body);
+          }
+
+          const fastApiUrl = `http://127.0.0.1:8000${urlStr}`;
+          const forwardHeaders: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+          if (req.headers['authorization']) {
+            forwardHeaders['authorization'] = req.headers['authorization'] as string;
+          }
+
+          const fastApiResp = await fetch(fastApiUrl, {
+            method: req.method || 'GET',
+            headers: forwardHeaders,
+            body: fetchBody,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (fastApiResp) {
+            res.statusCode = fastApiResp.status;
+            fastApiResp.headers.forEach((value, key) => {
+              if (key.toLowerCase() !== 'content-encoding') {
+                res.setHeader(key, value);
+              }
+            });
+            const respText = await fastApiResp.text();
+            res.end(respText);
+            return;
+          }
+        } catch (_fastApiErr) {
+          // FastAPI backend is offline or timed out -> proceed to local router fallback
+        }
+
+        // Fallback: Use built-in TypeScript Router
         const httpContext: HttpRequestContext = {
           method: req.method || 'GET',
           url: urlStr,
@@ -85,3 +128,5 @@ export function agiesBackendPlugin(): Plugin {
     },
   };
 }
+
+export const agiesBackendPlugin = aegisBackendPlugin;

@@ -1,5 +1,5 @@
 /**
- * AGIES ALERT - Data Provider Architecture Types
+ * AEGIS ALERT - Data Provider Architecture Types
  * Defines strict interfaces for Weather, Disaster Alerts, Geocoding, Maps, Radar, Satellite, and Lightning providers.
  * Supports dual DATA_MODE: 'LIVE' vs 'DEMO'.
  */

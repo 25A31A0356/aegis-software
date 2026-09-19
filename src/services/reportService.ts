@@ -1,10 +1,10 @@
 import { CitizenReport, ReportMediaItem, ReportHazardType, ReportSeverity, ReportStatus } from '../types/report';
 
-const STORAGE_KEY = 'agies_citizen_reports';
+const STORAGE_KEY = 'aegis_citizen_reports';
 
 export const INITIAL_DEMO_REPORTS: CitizenReport[] = [
   {
-    id: 'AGIES-REP-849102',
+    id: 'AEGIS-REP-849102',
     hazardType: 'flood',
     hazardLabel: 'Urban Flooding',
     location: {
@@ -18,7 +18,7 @@ export const INITIAL_DEMO_REPORTS: CitizenReport[] = [
     media: [
       {
         id: 'med-101',
-        mediaReference: 's3://agies-media-vault/2026/09/rep-849102-1.jpg',
+        mediaReference: 's3://aegis-media-vault/2026/09/rep-849102-1.jpg',
         url: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=600&q=80',
         fileType: 'image/jpeg',
         fileSize: 1420500,
@@ -42,7 +42,7 @@ export const INITIAL_DEMO_REPORTS: CitizenReport[] = [
     verificationNotes: 'GHMC Disaster Response Force deployed 2 dewatering suction pumps.',
   },
   {
-    id: 'AGIES-REP-731945',
+    id: 'AEGIS-REP-731945',
     hazardType: 'road_blockage',
     hazardLabel: 'Fallen Tree & Grid Line',
     location: {
@@ -56,7 +56,7 @@ export const INITIAL_DEMO_REPORTS: CitizenReport[] = [
     media: [
       {
         id: 'med-102',
-        mediaReference: 's3://agies-media-vault/2026/09/rep-731945-1.jpg',
+        mediaReference: 's3://aegis-media-vault/2026/09/rep-731945-1.jpg',
         url: 'https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=600&q=80',
         fileType: 'image/jpeg',
         fileSize: 2104000,
@@ -79,7 +79,7 @@ export const INITIAL_DEMO_REPORTS: CitizenReport[] = [
     verificationNotes: 'Brihanmumbai Municipal Corporation tree-clearing crew on site.',
   },
   {
-    id: 'AGIES-REP-610283',
+    id: 'AEGIS-REP-610283',
     hazardType: 'landslide',
     hazardLabel: 'Mudslide Debris',
     location: {
@@ -93,7 +93,7 @@ export const INITIAL_DEMO_REPORTS: CitizenReport[] = [
     media: [
       {
         id: 'med-103',
-        mediaReference: 's3://agies-media-vault/2026/09/rep-610283-1.jpg',
+        mediaReference: 's3://aegis-media-vault/2026/09/rep-610283-1.jpg',
         url: 'https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?auto=format&fit=crop&w=600&q=80',
         fileType: 'image/jpeg',
         fileSize: 3180000,
@@ -143,7 +143,7 @@ export class ReportService {
     await new Promise((resolve) => setTimeout(resolve, 600));
 
     const mediaId = `med-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const objectStorageKey = `s3://agies-media-vault/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${mediaId}-${file.name.replace(/\s+/g, '_')}`;
+    const objectStorageKey = `s3://aegis-media-vault/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${mediaId}-${file.name.replace(/\s+/g, '_')}`;
 
     // Read preview URL
     let previewUrl = '';
@@ -156,7 +156,7 @@ export class ReportService {
     } else if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
       previewUrl = URL.createObjectURL(file);
     } else {
-      previewUrl = `blob:https://agies.gov.in/${mediaId}`;
+      previewUrl = `blob:https://aegis.gov.in/${mediaId}`;
     }
 
     return {
@@ -193,7 +193,7 @@ export class ReportService {
     // Simulate backend network latency
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const reportId = `AGIES-REP-${Math.floor(100000 + Math.random() * 900000)}`;
+    const reportId = `AEGIS-REP-${Math.floor(100000 + Math.random() * 900000)}`;
     const now = new Date();
     const timestamp = `Today, ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST`;
 
@@ -224,7 +224,7 @@ export class ReportService {
   public static getAllReports(): CitizenReport[] {
     try {
       if (typeof localStorage !== 'undefined') {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('agies_citizen_reports');
         if (stored) {
           return JSON.parse(stored);
         }

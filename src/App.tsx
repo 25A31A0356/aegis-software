@@ -28,6 +28,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { HazardsPage } from './pages/HazardsPage';
 import { SOSPage } from './pages/SOSPage';
 import { ActivityPage } from './pages/ActivityPage';
+import { DataCoreAdminPage } from './pages/DataCoreAdminPage';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('homepage');
@@ -161,6 +162,10 @@ export const App: React.FC = () => {
                         onNavigate={setActiveTab}
                         onSelectHazardById={handleSelectHazardFromTickerOrSearch}
                       />
+                    )}
+
+                    {activeTab === 'datacore' && (
+                      <DataCoreAdminPage />
                     )}
                   </main>
                 </div>

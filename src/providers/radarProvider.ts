@@ -1,7 +1,7 @@
 /**
- * AGIES ALERT - Radar Provider Implementations
- * Live Provider: IMD Doppler Weather Radar (DWR) Network & RainViewer Radar Reflectivity API
- * Demo Provider: Structured Radar Storm Cells Simulation Dataset
+ * AEGIS ALERT - Radar Provider Implementations
+ * Live Provider: India Meteorological Department (IMD) Doppler Weather Radar (DWR) Grid
+ * Demo Provider: Structured Radar Reflectivity Dataset for Disaster Training
  */
 
 import { IRadarProvider, RadarStormCell, ProviderResult } from './types';
@@ -126,7 +126,7 @@ export class DemoRadarProvider implements IRadarProvider {
     return {
       data: demoCells,
       mode: 'DEMO',
-      sourceName: 'AGIES Simulated Doppler Radar Dataset',
+      sourceName: 'AEGIS Simulated Doppler Radar Dataset',
       sourceAuthority: 'NDMA Mock Training & Drill Registry',
       isLive: false,
       timestamp: 'Simulated Data',
