@@ -150,6 +150,24 @@ Allows citizens to submit ground-truth reports with photo URLs, severity tags, a
 
 ---
 
+---
+
+### 2.4 SOS Nearby Responder Network Integration
+See full spec: [sos_responder_network.md](file:///c:/Users/tst20/Aegis%20software/docs/sos_responder_network.md)
+
+1. **Opt-In as Nearby Responder**:
+   - `POST /api/v1/sos/responder/profile` with `{"is_opted_in": true, "is_available": true, "latitude": 28.6139, "longitude": 77.2090}`.
+2. **Listen for Distress Offers**:
+   - Connect to WebSocket `ws://localhost:8000/api/v1/ws` (Channel: `user:{userId}`) to receive `SOS_OFFER` push payloads.
+3. **Accept / Decline Offer**:
+   - `POST /api/v1/sos/{id}/accept` or `POST /api/v1/sos/{id}/decline`.
+   - On acceptance, exact coordinates and turn-by-turn route line are unlocked.
+4. **Live GPS Breadcrumb Tracking**:
+   - Responders stream breadcrumbs via `POST /api/v1/sos/{id}/responder-location`.
+   - Automatic route recalculation triggers if responder deviates by >150 meters.
+
+---
+
 ## 3. Mobile Client Best Practices
 
 1. **Offline-First Caching**:
@@ -159,3 +177,4 @@ Allows citizens to submit ground-truth reports with photo URLs, severity tags, a
    - If SOS submission fails due to weak cell signal, queue the beacon in local storage and retry immediately upon network reconnectivity.
 3. **Battery-Efficient Location Tracking**:
    - Use geofence region monitoring rather than continuous GPS polling to conserve battery during extended blackout scenarios.
+

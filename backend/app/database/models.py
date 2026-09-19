@@ -217,25 +217,118 @@ class SOSSignal(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     device_id = Column(String(100), nullable=True, index=True)
     user_id = Column(String(36), nullable=True, index=True)
+    requester_user_id = Column(String(36), nullable=True, index=True)
     caller_name = Column(String(100), default="Citizen in Distress", nullable=False)
     caller_phone = Column(String(50), default="", nullable=False)
     emergency_type = Column(String(50), default="general", nullable=False, index=True)  # medical, flood_trapped, fire, building_collapse, cyclone_shelter, general
-    severity = Column(String(30), default="CRITICAL", nullable=False)
-    status = Column(String(50), default="PENDING_TRIAGE", nullable=False, index=True)  # PENDING_TRIAGE, DISPATCHED, RESPONDER_ON_SCENE, RESCUED, CANCELLED
+    severity = Column(String(30), default="CRITICAL", nullable=False, index=True)
+    short_message = Column(String(500), default="", nullable=True)
     
+    # State Machine: PENDING, MATCHING, OFFERED, ACCEPTED, RESPONDER_EN_ROUTE, ON_SITE, RESOLVED, CANCELLED, EXPIRED
+    status = Column(String(50), default="PENDING", nullable=False, index=True)
+    
+    # Geospatial Location
     latitude = Column(Float, nullable=False, index=True)
     longitude = Column(Float, nullable=False, index=True)
     accuracy_meters = Column(Float, default=10.0, nullable=True)
+    location_timestamp = Column(DateTime(timezone=True), default=utc_now)
+    last_location_update = Column(DateTime(timezone=True), default=utc_now)
     address = Column(String(255), default="", nullable=True)
     city = Column(String(100), default="", nullable=True)
+    district = Column(String(100), default="", nullable=True)
     state = Column(String(100), default="", nullable=True)
+    country = Column(String(50), default="India", nullable=False)
     
+    # Context & Health
     battery_percent = Column(Integer, default=100, nullable=True)
     medical_notes = Column(Text, default="", nullable=True)
     casualties_count = Column(Integer, default=1, nullable=False)
     
+    # Assignment & Lifecycle
+    accepted_by = Column(String(36), nullable=True, index=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    resolution_notes = Column(Text, default="", nullable=True)
+    
     created_at = Column(DateTime(timezone=True), default=utc_now, index=True)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+SOSIncident = SOSSignal  # Architectural alias
+
+
+class SOSResponderCandidate(Base):
+    __tablename__ = "aegis_sos_responder_candidates"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    sos_id = Column(String(36), ForeignKey("aegis_sos_signals.id", ondelete="CASCADE"), nullable=False, index=True)
+    responder_user_id = Column(String(36), nullable=False, index=True)
+    status = Column(String(30), default="OFFERED", nullable=False, index=True)  # OFFERED, ACCEPTED, DECLINED, EXPIRED
+    distance_km = Column(Float, default=0.0, nullable=False)
+    offered_at = Column(DateTime(timezone=True), default=utc_now)
+    responded_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_sos_candidate_unique", "sos_id", "responder_user_id", unique=True),
+    )
+
+
+class SOSAssignment(Base):
+    __tablename__ = "aegis_sos_assignments"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    sos_id = Column(String(36), ForeignKey("aegis_sos_signals.id", ondelete="CASCADE"), nullable=False, index=True)
+    responder_user_id = Column(String(36), nullable=False, index=True)
+    status = Column(String(30), default="ACTIVE", nullable=False, index=True)  # ACTIVE, COMPLETED, CANCELLED
+    assigned_at = Column(DateTime(timezone=True), default=utc_now)
+    route_geometry = Column(JSON, default=dict, nullable=False)  # GeoJSON LineString
+    distance_meters = Column(Float, default=0.0, nullable=False)
+    eta_seconds = Column(Integer, default=0, nullable=False)
+    last_responder_lat = Column(Float, nullable=True)
+    last_responder_lon = Column(Float, nullable=True)
+    last_responder_update = Column(DateTime(timezone=True), nullable=True)
+
+
+class SOSLocationUpdate(Base):
+    __tablename__ = "aegis_sos_location_updates"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    sos_id = Column(String(36), ForeignKey("aegis_sos_signals.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String(36), nullable=False, index=True)
+    user_type = Column(String(20), default="REQUESTER", nullable=False)  # REQUESTER, RESPONDER
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    accuracy_meters = Column(Float, default=10.0, nullable=True)
+    battery_percent = Column(Integer, default=100, nullable=True)
+    speed_kmh = Column(Float, default=0.0, nullable=True)
+    recorded_at = Column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class SOSStatusHistory(Base):
+    __tablename__ = "aegis_sos_status_history"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    sos_id = Column(String(36), ForeignKey("aegis_sos_signals.id", ondelete="CASCADE"), nullable=False, index=True)
+    old_status = Column(String(50), nullable=False)
+    new_status = Column(String(50), nullable=False)
+    changed_by_user_id = Column(String(36), nullable=True)
+    reason = Column(String(255), default="", nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class SOSNotification(Base):
+    __tablename__ = "aegis_sos_notifications"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    sos_id = Column(String(36), ForeignKey("aegis_sos_signals.id", ondelete="CASCADE"), nullable=False, index=True)
+    recipient_type = Column(String(30), nullable=False)  # FAMILY_CONTACT, NEARBY_RESPONDER, OPERATOR
+    recipient_id = Column(String(100), nullable=False, index=True)
+    channel = Column(String(30), default="WEBSOCKET", nullable=False)  # WEBSOCKET, PUSH, SMS, IN_APP
+    status = Column(String(30), default="SENT", nullable=False)  # PENDING, SENT, DELIVERED, FAILED
+    details = Column(JSON, default=dict, nullable=False)
+    sent_at = Column(DateTime(timezone=True), default=utc_now)
 
 
 class IncidentReport(Base):
@@ -355,5 +448,16 @@ class UserPreference(Base):
     push_enabled = Column(Boolean, default=True, nullable=False)
     sms_alerts_enabled = Column(Boolean, default=False, nullable=False)
     language = Column(String(10), default="en", nullable=False)
+    
+    # SOS Responder Network Participation
+    is_responder_opted_in = Column(Boolean, default=False, nullable=False, index=True)
+    is_available = Column(Boolean, default=True, nullable=False, index=True)
+    last_known_lat = Column(Float, nullable=True, index=True)
+    last_known_lng = Column(Float, nullable=True, index=True)
+    last_location_time = Column(DateTime(timezone=True), default=utc_now, nullable=True)
+    
+    # Family Emergency Contacts
+    emergency_contacts = Column(JSON, default=list, nullable=False)  # [{"name": "Family", "phone": "+919876543210", "relationship": "Parent"}]
+    
     created_at = Column(DateTime(timezone=True), default=utc_now)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)

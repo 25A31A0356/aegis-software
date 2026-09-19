@@ -69,15 +69,28 @@ Every endpoint returns a unified JSON envelope:
 | `/api/v1/location/search`| GET | Web / App | Rate Limited | Forward geocoding place search |
 | `/api/v1/location/reverse`| GET | Web / App | Rate Limited | Reverse geocode coordinates to district & state |
 | `/api/v1/mobile/sync` | GET | App (Mobile) | Rate Limited | Single-call low-bandwidth payload for mobile sync |
-| `/api/v1/sos` | POST | Web / App | Rate Limited | Emergency SOS distress signal submission |
+| `/api/v1/sos` | POST/GET | Web / App | Rate Limited | Distress trigger & list active SOS emergencies |
+| `/api/v1/sos/nearby` | GET | Web / App | Rate Limited | Geospatial nearby SOS discovery (10km-20km) |
+| `/api/v1/sos/{id}` | GET | Web / App | Rate Limited | Get detailed SOS status, responder, and ETA |
+| `/api/v1/sos/{id}/accept` | POST | Web / App | Rate Limited | Atomic responder acceptance (locks assignment) |
+| `/api/v1/sos/{id}/decline` | POST | Web / App | Rate Limited | Decline responder offer |
+| `/api/v1/sos/{id}/location` | POST | Web / App | Rate Limited | Requester live GPS breadcrumbs |
+| `/api/v1/sos/{id}/responder-location` | POST | Web / App | Rate Limited | Responder live GPS breadcrumbs & auto reroute (>150m) |
+| `/api/v1/sos/{id}/status` | POST | Web / App | Rate Limited | Update state machine status (e.g. ON_SITE) |
+| `/api/v1/sos/{id}/resolve` | POST | Web / App | Rate Limited | Mark emergency as RESOLVED with audit notes |
+| `/api/v1/sos/{id}/cancel` | POST | Web / App | Rate Limited | Cancel distress signal |
+| `/api/v1/sos/responder/profile` | POST | Web / App | Rate Limited | Update responder opt-in and live availability |
 | `/api/v1/reports` | GET/POST | Web / App | Rate Limited | Single Source of Truth Community Incident Reports & Offline Sync |
 | `/api/v1/reports/{id}/vote` | POST | Web / App | Rate Limited | Community verification upvote/downvote casting |
 | `/api/v1/activity` | GET | Web / App | Rate Limited | Unified Activity Feed merging official & community events |
 | `/api/v1/activity/stream` | GET | Web / App | Rate Limited | Server-Sent Events (SSE) live activity event stream |
 | `/api/v1/map-data` | GET | Web / App | Rate Limited | Unified GeoJSON GIS map layers (hazards, reports, SOS, shelters) |
 | `/api/v1/ws` | WebSocket | Web / App | Client Key | Real-Time bidirectional WebSocket push notifications |
+| `/api/v1/ws/sos` | WebSocket | Web / App | Client Key | Dedicated real-time SOS tracking & offer WebSocket |
 | `/api/v1/auth/preferences` | GET/PUT | Web / App | Bearer JWT | Cross-platform user saved locations & alert preferences sync |
 | `/api/v1/sources` | GET/POST | Admin Console | Admin JWT | External provider connector management & keys |
+
+> **Full SOS Documentation**: See [sos_responder_network.md](file:///c:/Users/tst20/Aegis%20software/docs/sos_responder_network.md) for detailed state machine diagrams, privacy protocols, and event payloads.
 
 ---
 

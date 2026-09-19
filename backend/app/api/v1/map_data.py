@@ -155,7 +155,11 @@ async def get_unified_map_data(
 
     # 3. LAYER: SOS Distress Beacons (Sanitized)
     if include_all or "sos_beacons" in req_layers:
-        sos_query = select(SOSSignal).where(SOSSignal.status.in_(["PENDING_TRIAGE", "DISPATCHED", "RESPONDER_ON_SCENE"])).limit(50)
+        active_sos_states = [
+            "PENDING", "MATCHING", "OFFERED", "ACCEPTED", "RESPONDER_EN_ROUTE", "ON_SITE",
+            "PENDING_TRIAGE", "DISPATCHED", "RESPONDER_ON_SCENE"
+        ]
+        sos_query = select(SOSSignal).where(SOSSignal.status.in_(active_sos_states)).limit(50)
         sos_res = await db.execute(sos_query)
         for s in sos_res.scalars().all():
             if in_bounds(s.latitude, s.longitude):

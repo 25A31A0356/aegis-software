@@ -9,9 +9,9 @@ services:
     container_name: aegis-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: aegis_db
-      POSTGRES_USER: aegis_user
-      POSTGRES_PASSWORD: aegis_secure_password_2026
+      POSTGRES_DB: ${POSTGRES_DB:-aegis_db}
+      POSTGRES_USER: ${POSTGRES_USER:-aegis_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aegis_secure_password_2026}
     ports:
       - "5432:5432"
     volumes:
@@ -54,12 +54,12 @@ services:
     container_name: aegis-backend
     restart: unless-stopped
     environment:
-      ENVIRONMENT: production
-      DATABASE_URL: postgresql+asyncpg://aegis_user:aegis_secure_password_2026@postgres:5432/aegis_db
-      REDIS_URL: redis://redis:6379/0
-      ENCRYPTION_KEY: "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
-      JWT_SECRET_KEY: "aegis_super_secret_jwt_key_multi_hazard_2026_secure"
-      CORS_ORIGINS: "http://localhost:5173,http://localhost:3000,http://localhost:80"
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://aegis_user:aegis_secure_password_2026@postgres:5432/aegis_db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      ENCRYPTION_KEY: ${AEGIS_SECRET_KEY:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
+      JWT_SECRET_KEY: ${JWT_SECRET:-aegis_super_secret_jwt_key_multi_hazard_2026_secure}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:80}
     ports:
       - "8000:8000"
     depends_on:

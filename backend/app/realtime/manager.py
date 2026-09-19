@@ -69,6 +69,29 @@ class ConnectionManager:
         for ws in disconnected:
             self.disconnect(ws)
 
+    async def send_to_user(self, user_id: str, message: Dict[str, Any]) -> bool:
+        """Sends targeted real-time message directly to all sockets of a specific user."""
+        if not user_id:
+            return False
+        
+        target_uid = str(user_id).strip()
+        sent = False
+        disconnected = []
+        text_payload = json.dumps(message)
+
+        for ws, meta in self.active_connections.items():
+            if str(meta.get("user_id") or "") == target_uid:
+                try:
+                    await ws.send_text(text_payload)
+                    sent = True
+                except Exception as e:
+                    logger.warning(f"Error sending direct WebSocket to user {user_id}: {e}")
+                    disconnected.append(ws)
+
+        for ws in disconnected:
+            self.disconnect(ws)
+        return sent
+
     # SSE support
     async def add_sse_listener(self) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue(maxsize=100)

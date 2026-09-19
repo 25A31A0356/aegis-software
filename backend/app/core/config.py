@@ -91,5 +91,13 @@ class Settings(BaseSettings):
     ENABLE_BACKGROUND_SCHEDULER: bool = True
     DEFAULT_INGESTION_INTERVAL_MINUTES: int = 5
 
+    # SOS Responder Network Configuration
+    SOS_INITIAL_RADIUS_KM: float = 10.0
+    SOS_MAX_RADIUS_KM: float = 20.0
+    SOS_EXPIRATION_MINUTES: int = 60
+    SOS_OFFER_TIMEOUT_SECONDS: int = 45
+    SOS_ROUTE_RECALC_METERS: float = 150.0
+    SOS_MAX_CANDIDATES: int = 10
+
 
 settings = Settings()
