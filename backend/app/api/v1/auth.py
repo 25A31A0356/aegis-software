@@ -135,9 +135,14 @@ async def user_login(
 
 @router.get("/me", response_model=ApiResponse[Dict[str, Any]])
 async def get_current_user_profile(
-    current_user: User = Depends(require_authenticated_user)
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Returns profile information for currently authenticated JWT holder."""
+    """Returns profile and synchronized preferences for currently authenticated user."""
+    from backend.app.database.models import UserPreference
+    pref_res = await db.execute(select(UserPreference).where(UserPreference.user_id == current_user.id))
+    pref = pref_res.scalars().first()
+
     return ApiResponse(
         success=True,
         data={
@@ -145,7 +150,68 @@ async def get_current_user_profile(
             "email": current_user.email,
             "full_name": current_user.full_name,
             "role": current_user.role,
+            "saved_locations": pref.saved_locations if pref else [],
+            "hazard_subscriptions": pref.hazard_subscriptions if pref else ["FLOOD", "EARTHQUAKE", "CYCLONE", "FIRE"],
+            "push_enabled": pref.push_enabled if pref else True,
+            "sms_alerts_enabled": pref.sms_alerts_enabled if pref else False,
+            "language": pref.language if pref else "en",
             "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+        }
+    )
+
+
+class UpdatePreferencesRequest(BaseModel):
+    saved_locations: Optional[list] = None
+    hazard_subscriptions: Optional[list] = None
+    push_enabled: Optional[bool] = None
+    sms_alerts_enabled: Optional[bool] = None
+    language: Optional[str] = None
+
+
+@router.put("/preferences", response_model=ApiResponse[Dict[str, Any]])
+async def update_user_preferences(
+    payload: UpdatePreferencesRequest,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Updates user saved locations, hazard alerts, and notification preferences."""
+    from backend.app.database.models import UserPreference
+    pref_res = await db.execute(select(UserPreference).where(UserPreference.user_id == current_user.id))
+    pref = pref_res.scalars().first()
+
+    if not pref:
+        pref = UserPreference(
+            user_id=current_user.id,
+            saved_locations=payload.saved_locations or [],
+            hazard_subscriptions=payload.hazard_subscriptions or ["FLOOD", "EARTHQUAKE", "CYCLONE", "FIRE"],
+            push_enabled=payload.push_enabled if payload.push_enabled is not None else True,
+            sms_alerts_enabled=payload.sms_alerts_enabled if payload.sms_alerts_enabled is not None else False,
+            language=payload.language or "en"
+        )
+        db.add(pref)
+    else:
+        if payload.saved_locations is not None:
+            pref.saved_locations = payload.saved_locations
+        if payload.hazard_subscriptions is not None:
+            pref.hazard_subscriptions = payload.hazard_subscriptions
+        if payload.push_enabled is not None:
+            pref.push_enabled = payload.push_enabled
+        if payload.sms_alerts_enabled is not None:
+            pref.sms_alerts_enabled = payload.sms_alerts_enabled
+        if payload.language is not None:
+            pref.language = payload.language
+
+    await db.commit()
+    await db.refresh(pref)
+
+    return ApiResponse(
+        success=True,
+        data={
+            "saved_locations": pref.saved_locations,
+            "hazard_subscriptions": pref.hazard_subscriptions,
+            "push_enabled": pref.push_enabled,
+            "sms_alerts_enabled": pref.sms_alerts_enabled,
+            "language": pref.language
         }
     )
 

@@ -24,6 +24,9 @@ from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.admin import router as admin_router
 from backend.app.api.v1.sos import router as sos_router
 from backend.app.api.v1.reports import router as reports_router
+from backend.app.api.v1.activity import router as activity_router
+from backend.app.api.v1.map_data import router as map_data_router
+from backend.app.api.v1.ws import router as ws_router
 from backend.app.api.v1.mobile import router as mobile_router
 
 api_router = APIRouter()
@@ -49,4 +52,7 @@ api_router.include_router(health_router)
 api_router.include_router(admin_router)
 api_router.include_router(sos_router)
 api_router.include_router(reports_router)
+api_router.include_router(activity_router)
+api_router.include_router(map_data_router)
+api_router.include_router(ws_router)
 api_router.include_router(mobile_router)

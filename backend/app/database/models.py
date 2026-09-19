@@ -243,19 +243,117 @@ class IncidentReport(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     user_id = Column(String(36), nullable=True, index=True)
-    hazard_type = Column(String(50), nullable=False, index=True)
+    anonymous_reporter_id = Column(String(100), nullable=True, index=True)
+    reporter_name = Column(String(100), default="Citizen Observer", nullable=True)
+    
+    # Classification & Category
+    category = Column(String(50), default="OTHER", nullable=False, index=True)  # FLOOD, WATERLOGGING, BLOCKED_ROAD, FALLEN_TREE, LANDSLIDE, FIRE, SEVERE_WEATHER, DAMAGED_INFRASTRUCTURE, ACCIDENT, UNSAFE_AREA, OTHER
+    hazard_type = Column(String(50), nullable=False, index=True)  # Backward-compatible synonym
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
-    severity = Column(String(30), default="medium", nullable=False)
+    severity = Column(String(30), default="MODERATE", nullable=False, index=True)  # LOW, MODERATE, HIGH, CRITICAL
     
+    # Lifecycle & Verification
+    status = Column(String(50), default="ACTIVE", nullable=False, index=True)  # SUBMITTED, PENDING_REVIEW, VERIFIED, UNVERIFIED, ACTIVE, RESOLVED, EXPIRED
+    verification_status = Column(String(50), default="UNVERIFIED_COMMUNITY", nullable=False, index=True)  # OFFICIAL, COMMUNITY, VERIFIED_COMMUNITY, UNVERIFIED_COMMUNITY
+    is_verified = Column(Boolean, default=False, nullable=False, index=True)
+    verification_source = Column(String(100), default="CITIZEN_SUBMISSION", nullable=False)
+    source = Column(String(50), default="COMMUNITY", nullable=False, index=True)  # OFFICIAL, COMMUNITY
+    
+    # Geospatial Location
     latitude = Column(Float, nullable=False, index=True)
     longitude = Column(Float, nullable=False, index=True)
+    accuracy_meters = Column(Float, default=10.0, nullable=True)
+    location_name = Column(String(255), default="", nullable=True)
+    city = Column(String(100), default="", nullable=True)
+    district = Column(String(100), default="", nullable=True)
+    state = Column(String(100), default="", nullable=True)
+    country = Column(String(50), default="India", nullable=False)
+    
+    # Community Trust & Media
+    media_urls = Column(JSON, default=list, nullable=False)
+    upvotes = Column(Integer, default=0, nullable=False)
+    downvotes = Column(Integer, default=0, nullable=False)
+    idempotency_key = Column(String(100), unique=True, nullable=True, index=True)  # Offline sync deduplication
+    
+    # Lifecycle Timestamps
+    expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+CommunityReport = IncidentReport  # Architectural alias
+
+
+class ReportVote(Base):
+    __tablename__ = "aegis_report_votes"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    report_id = Column(String(36), ForeignKey("aegis_incident_reports.id", ondelete="CASCADE"), nullable=False, index=True)
+    voter_id = Column(String(100), nullable=False, index=True)  # user_id or anonymous device_id
+    vote_type = Column(String(20), default="UPVOTE", nullable=False)  # UPVOTE, DOWNVOTE
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+
+    __table_args__ = (
+        Index("ix_report_voter_unique", "report_id", "voter_id", unique=True),
+    )
+
+
+class ActivityEvent(Base):
+    __tablename__ = "aegis_activity_events"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_type = Column(String(50), nullable=False, index=True)  # REPORT_CREATED, REPORT_UPDATED, REPORT_VERIFIED, REPORT_RESOLVED, HAZARD_CREATED, HAZARD_UPDATED, SOS_CREATED, SOS_UPDATED
+    entity_type = Column(String(50), nullable=False, index=True)  # COMMUNITY_REPORT, HAZARD, ALERT, SOS
+    entity_id = Column(String(100), nullable=False, index=True)
+    
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    category = Column(String(50), nullable=False, index=True)
+    severity = Column(String(30), default="MODERATE", nullable=False, index=True)
+    
+    latitude = Column(Float, nullable=True, index=True)
+    longitude = Column(Float, nullable=True, index=True)
     location_name = Column(String(255), default="", nullable=True)
     city = Column(String(100), default="", nullable=True)
     state = Column(String(100), default="", nullable=True)
     
-    media_urls = Column(JSON, default=list, nullable=False)
-    is_verified = Column(Boolean, default=False, nullable=False, index=True)
-    verification_source = Column(String(100), default="CITIZEN_SUBMISSION", nullable=False)
-    
+    source = Column(String(50), default="COMMUNITY", nullable=False)  # OFFICIAL, COMMUNITY
+    verification_status = Column(String(50), default="UNVERIFIED_COMMUNITY", nullable=False)
+    payload = Column(JSON, default=dict, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class SafeZone(Base):
+    __tablename__ = "aegis_safe_zones"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    name = Column(String(255), nullable=False)
+    zone_type = Column(String(50), default="RELIEF_SHELTER", nullable=False, index=True)  # RELIEF_SHELTER, EVACUATION_CENTER, MEDICAL_STATION, SAFE_ZONE
+    latitude = Column(Float, nullable=False, index=True)
+    longitude = Column(Float, nullable=False, index=True)
+    capacity = Column(Integer, default=500, nullable=False)
+    current_occupancy = Column(Integer, default=0, nullable=False)
+    address = Column(String(255), default="", nullable=True)
+    city = Column(String(100), default="", nullable=True)
+    district = Column(String(100), default="", nullable=True)
+    state = Column(String(100), default="", nullable=True)
+    contact_phone = Column(String(50), default="", nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    amenities = Column(JSON, default=list, nullable=False)  # ["FOOD", "WATER", "MEDICAL", "POWER"]
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class UserPreference(Base):
+    __tablename__ = "aegis_user_preferences"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("aegis_users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    saved_locations = Column(JSON, default=list, nullable=False)  # [{"name": "Home", "lat": 28.61, "lng": 77.20}]
+    hazard_subscriptions = Column(JSON, default=list, nullable=False)  # ["FLOOD", "EARTHQUAKE", "CYCLONE"]
+    push_enabled = Column(Boolean, default=True, nullable=False)
+    sms_alerts_enabled = Column(Boolean, default=False, nullable=False)
+    language = Column(String(10), default="en", nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)

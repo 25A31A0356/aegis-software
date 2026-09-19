@@ -70,7 +70,13 @@ Every endpoint returns a unified JSON envelope:
 | `/api/v1/location/reverse`| GET | Web / App | Rate Limited | Reverse geocode coordinates to district & state |
 | `/api/v1/mobile/sync` | GET | App (Mobile) | Rate Limited | Single-call low-bandwidth payload for mobile sync |
 | `/api/v1/sos` | POST | Web / App | Rate Limited | Emergency SOS distress signal submission |
-| `/api/v1/reports` | POST | Web / App | Rate Limited | Crowdsourced citizen incident report dispatch |
+| `/api/v1/reports` | GET/POST | Web / App | Rate Limited | Single Source of Truth Community Incident Reports & Offline Sync |
+| `/api/v1/reports/{id}/vote` | POST | Web / App | Rate Limited | Community verification upvote/downvote casting |
+| `/api/v1/activity` | GET | Web / App | Rate Limited | Unified Activity Feed merging official & community events |
+| `/api/v1/activity/stream` | GET | Web / App | Rate Limited | Server-Sent Events (SSE) live activity event stream |
+| `/api/v1/map-data` | GET | Web / App | Rate Limited | Unified GeoJSON GIS map layers (hazards, reports, SOS, shelters) |
+| `/api/v1/ws` | WebSocket | Web / App | Client Key | Real-Time bidirectional WebSocket push notifications |
+| `/api/v1/auth/preferences` | GET/PUT | Web / App | Bearer JWT | Cross-platform user saved locations & alert preferences sync |
 | `/api/v1/sources` | GET/POST | Admin Console | Admin JWT | External provider connector management & keys |
 
 ---
