@@ -45,12 +45,14 @@ class ReverseLocationResult(BaseModel):
 async def get_location_info(
     query: Optional[str] = Query(default=None, description="Search location name"),
     lat: Optional[float] = Query(default=None, ge=-90.0, le=90.0, description="Latitude for reverse geocoding"),
-    lng: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="Longitude for reverse geocoding"),
+    lng: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="Longitude for reverse geocoding (lng)"),
+    lon: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="Longitude for reverse geocoding (lon)"),
 ):
     """
     Unified location resolver: accepts either a text search query or coordinates.
     """
     provider = GeographicLocationProvider()
+    longitude = lng if lng is not None else lon
 
     if query:
         cache_key = f"geo_search_{query.strip().lower()}"
@@ -80,8 +82,8 @@ async def get_location_info(
             )
         )
 
-    if lat is not None and lng is not None:
-        cache_key = f"geo_reverse_{lat:.3f}_{lng:.3f}"
+    if lat is not None and longitude is not None:
+        cache_key = f"geo_reverse_{lat:.3f}_{longitude:.3f}"
         cached = await CacheManager.get(cache_key)
         if cached:
             return ApiResponse(
@@ -95,7 +97,7 @@ async def get_location_info(
                 )
             )
 
-        resolved = await provider.reverse_geocode(lat, lng)
+        resolved = await provider.reverse_geocode(lat, longitude)
         await CacheManager.set(cache_key, resolved, ttl_seconds=3600)
         return ApiResponse(
             success=True,
@@ -108,7 +110,7 @@ async def get_location_info(
             )
         )
 
-    raise HTTPException(status_code=400, detail="Must provide either 'query' string or ('lat', 'lng') coordinates.")
+    raise HTTPException(status_code=400, detail="Must provide either 'query' string or ('lat', 'lng'/'lon') coordinates.")
 
 
 @router.get("/search", response_model=ApiResponse[List[LocationSearchResult]], dependencies=[Depends(rate_limit_check)])
@@ -136,13 +138,18 @@ async def search_location(
 @router.get("/reverse", response_model=ApiResponse[ReverseLocationResult], dependencies=[Depends(rate_limit_check)])
 async def reverse_location(
     lat: float = Query(..., ge=-90.0, le=90.0),
-    lng: float = Query(..., ge=-180.0, le=180.0)
+    lng: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="Longitude (lng)"),
+    lon: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="Longitude (lon)")
 ):
     """
     Reverse geocodes latitude/longitude coordinates into administrative district, state, and elevation.
     """
+    longitude = lng if lng is not None else lon
+    if longitude is None:
+        raise HTTPException(status_code=422, detail="Missing required longitude coordinate (provide 'lng' or 'lon').")
+
     provider = GeographicLocationProvider()
-    resolved = await provider.reverse_geocode(lat, lng)
+    resolved = await provider.reverse_geocode(lat, longitude)
     return ApiResponse(
         success=True,
         data=ReverseLocationResult(**resolved),

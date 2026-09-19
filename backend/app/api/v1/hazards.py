@@ -120,7 +120,8 @@ async def list_hazards(
 @router.get("/nearby", response_model=ApiResponse[List[NearbyHazardItem]], dependencies=[Depends(rate_limit_check)])
 async def get_nearby_hazards(
     lat: float = Query(..., ge=-90.0, le=90.0, description="User latitude"),
-    lng: float = Query(..., ge=-180.0, le=180.0, description="User longitude"),
+    lng: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="User longitude (lng)"),
+    lon: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="User longitude (lon)"),
     radius_km: float = Query(default=50.0, ge=1.0, le=500.0, description="Search radius in km"),
     hazard_type: Optional[str] = Query(default=None, description="Optional hazard type filter"),
     limit: int = Query(default=30, ge=1, le=100),
@@ -130,6 +131,10 @@ async def get_nearby_hazards(
     Dedicated spatial search returning hazards sorted by proximity to coordinates.
     Includes distance in km, compass bearing, and normalized Aegis severity.
     """
+    longitude = lng if lng is not None else lon
+    if longitude is None:
+        raise HTTPException(status_code=422, detail="Missing required longitude coordinate (provide 'lng' or 'lon').")
+
     query = select(NormalizedObservation).order_by(desc(NormalizedObservation.observed_at)).limit(200)
     if hazard_type and hazard_type.upper() != "ALL":
         query = query.where(NormalizedObservation.hazard_type == hazard_type.upper())
@@ -139,9 +144,9 @@ async def get_nearby_hazards(
 
     nearby: List[NearbyHazardItem] = []
     for r in rows:
-        dist = EventDeduplicator.haversine_distance_km(lat, lng, r.latitude, r.longitude)
+        dist = EventDeduplicator.haversine_distance_km(lat, longitude, r.latitude, r.longitude)
         if dist <= radius_km:
-            bearing = calculate_bearing(lat, lng, r.latitude, r.longitude)
+            bearing = calculate_bearing(lat, longitude, r.latitude, r.longitude)
             
             # Map severity to standard Aegis model (LOW, MODERATE, HIGH, CRITICAL)
             sev_raw = (r.severity or "moderate").upper()

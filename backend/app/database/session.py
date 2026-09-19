@@ -16,29 +16,24 @@ db_url = settings.DATABASE_URL
 if db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Configure engine
-engine_kwargs = {}
-if "sqlite" in db_url:
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
-else:
-    engine_kwargs["pool_size"] = settings.DB_POOL_SIZE
-    engine_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+def create_engine_and_factory(url: str):
+    engine_kwargs = {}
+    if "sqlite" in url:
+        engine_kwargs["connect_args"] = {"check_same_thread": False}
+    else:
+        engine_kwargs["pool_size"] = settings.DB_POOL_SIZE
+        engine_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+    eng = create_async_engine(url, echo=settings.DEBUG, **engine_kwargs)
+    factory = async_sessionmaker(
+        bind=eng,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+    return eng, factory
 
-try:
-    engine = create_async_engine(db_url, echo=settings.DEBUG, **engine_kwargs)
-except Exception as e:
-    # Fallback to local SQLite if PostgreSQL is not reachable locally during offline dev
-    logger.warning(f"Could not connect to {db_url}: {e}. Falling back to SQLite for local workspace runtime.")
-    db_url = "sqlite+aiosqlite:///./aegis_local.db"
-    engine = create_async_engine(db_url, echo=settings.DEBUG, connect_args={"check_same_thread": False})
-
-async_session_factory = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
+engine, async_session_factory = create_engine_and_factory(db_url)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -56,8 +51,19 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db():
     """Initializes database tables and bootstraps initial admin user."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    global engine, async_session_factory
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        logger.warning(
+            f"Database connection to '{db_url}' failed ({e}). "
+            "Falling back to local SQLite ('sqlite+aiosqlite:///./aegis_local.db') for offline development."
+        )
+        engine, _ = create_engine_and_factory("sqlite+aiosqlite:///./aegis_local.db")
+        async_session_factory.configure(bind=engine)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     async with async_session_factory() as session:
         # Check if default admin exists
