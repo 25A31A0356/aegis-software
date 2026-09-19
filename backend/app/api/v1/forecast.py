@@ -3,7 +3,7 @@ AEGIS UNIFIED DATA CORE - Multi-Day & Hourly Meteorological Forecast API
 /api/v1/forecast
 """
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel, Field
 import httpx
@@ -135,7 +135,8 @@ async def get_forecast(
         fallback_daily = []
         fallback_hourly = []
         for d in range(days):
-            date_str = datetime.now(timezone.utc).strftime(f"%Y-%m-%{min(28, 10 + d):02d}")
+            target_dt = datetime.now(timezone.utc) + timedelta(days=d)
+            date_str = target_dt.strftime("%Y-%m-%d")
             fallback_daily.append(DailyForecastItem(
                 date=date_str,
                 temp_max_c=32.0,

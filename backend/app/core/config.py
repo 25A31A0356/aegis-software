@@ -1,9 +1,9 @@
 """
 AEGIS UNIFIED DATA CORE - Core Configuration
 """
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -30,9 +30,23 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:8000",
     ]
+    CORS_ORIGINS: Optional[str] = None
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return v
+        return [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://localhost:8000",
+        ]
 
     # Database & Storage
-    # Default to PostgreSQL, with fallback for local test sqlite if needed
     DATABASE_URL: str = "postgresql+asyncpg://aegis_user:aegis_secure_password_2026@localhost:5432/aegis_db"
     DATABASE_SYNC_URL: Optional[str] = "postgresql://aegis_user:aegis_secure_password_2026@localhost:5432/aegis_db"
     DB_POOL_SIZE: int = 10
@@ -43,7 +57,6 @@ class Settings(BaseSettings):
     CACHE_DEFAULT_TTL_SEC: int = 300  # 5 minutes
 
     # Security & Encryption
-    # AEGIS_SECRET_KEY used for AES/Fernet encryption of provider API keys at rest
     AEGIS_SECRET_KEY: str = "aegis_master_encryption_key_32_bytes_min_2026!"
     JWT_SECRET: str = "aegis_jwt_super_secret_signing_key_production_2026"
     JWT_ALGORITHM: str = "HS256"
@@ -52,6 +65,10 @@ class Settings(BaseSettings):
     # Admin Default Credentials (bootstrapped securely on startup if not present)
     DEFAULT_ADMIN_EMAIL: str = "admin@aegis.gov.in"
     DEFAULT_ADMIN_PASSWORD: str = "AegisAdmin@2026!"
+
+    # Application Client Keys (for Aegis Web & Aegis Mobile App authentication)
+    AEGIS_WEB_CLIENT_KEY: Optional[str] = "aegis_web_client_secure_key_2026"
+    AEGIS_APP_CLIENT_KEY: Optional[str] = "aegis_app_client_secure_key_2026"
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 120

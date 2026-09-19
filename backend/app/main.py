@@ -3,7 +3,7 @@ AEGIS UNIFIED DATA CORE - Main FastAPI Application
 Production-Ready Real-Time Weather & Multi-Hazard Data Infrastructure
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status, Depends
+from fastapi import FastAPI, Request, status, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -89,6 +89,21 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 "code": "VALIDATION_ERROR",
                 "message": "Invalid request parameters or payload format.",
                 "details": exc.errors()
+            }
+        }
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": f"HTTP_{exc.status_code}",
+                "message": exc.detail if isinstance(exc.detail, str) else "Request processing error.",
+                "details": exc.detail if not isinstance(exc.detail, str) else None
             }
         }
     )

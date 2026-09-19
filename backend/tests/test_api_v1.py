@@ -98,7 +98,7 @@ async def test_admin_source_crud_and_ssrf(async_client: AsyncClient, admin_heade
     }
     res_bad = await async_client.post("/api/v1/sources", json=bad_payload, headers=admin_headers)
     assert res_bad.status_code == 400
-    assert "SSRF" in res_bad.json().get("detail", "")
+    assert "SSRF" in str(res_bad.json())
 
     # 2. Test creating a valid external source
     good_payload = {

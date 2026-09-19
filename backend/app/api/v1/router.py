@@ -1,8 +1,10 @@
 """
 AEGIS UNIFIED DATA CORE - Master API v1 Router
-Aggregates all multi-hazard, weather, telemetry, source management, and admin routes.
+Aggregates all multi-hazard, weather, telemetry, source management, discovery, auth, and admin routes.
 """
 from fastapi import APIRouter
+from backend.app.api.v1.discovery import router as discovery_router
+from backend.app.api.v1.auth import router as auth_router
 from backend.app.api.v1.weather import router as weather_router
 from backend.app.api.v1.forecast import router as forecast_router
 from backend.app.api.v1.hazards import router as hazards_router
@@ -26,6 +28,8 @@ from backend.app.api.v1.mobile import router as mobile_router
 
 api_router = APIRouter()
 
+api_router.include_router(discovery_router)
+api_router.include_router(auth_router)
 api_router.include_router(weather_router)
 api_router.include_router(forecast_router)
 api_router.include_router(hazards_router)
