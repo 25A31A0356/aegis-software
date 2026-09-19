@@ -11,6 +11,7 @@ from backend.app.providers.adapters.cwc import CWCFloodProvider
 from backend.app.providers.adapters.incois import INCOISOceanProvider
 from backend.app.providers.adapters.nasa_firms import NASAFIRMSProvider
 from backend.app.providers.adapters.cpcb import CPCBAirQualityProvider
+from backend.app.providers.adapters.geographic import GeographicLocationProvider
 from backend.app.providers.adapters.custom_http import CustomHttpProvider
 
 
@@ -23,6 +24,7 @@ class ProviderRegistry:
         "incois": INCOISOceanProvider,
         "nasa_firms": NASAFIRMSProvider,
         "cpcb": CPCBAirQualityProvider,
+        "geographic": GeographicLocationProvider,
     }
 
     @classmethod

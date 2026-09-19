@@ -4,6 +4,7 @@ Aggregates all multi-hazard, weather, telemetry, source management, and admin ro
 """
 from fastapi import APIRouter
 from backend.app.api.v1.weather import router as weather_router
+from backend.app.api.v1.forecast import router as forecast_router
 from backend.app.api.v1.hazards import router as hazards_router
 from backend.app.api.v1.alerts import router as alerts_router
 from backend.app.api.v1.earthquakes import router as earthquakes_router
@@ -12,6 +13,8 @@ from backend.app.api.v1.cyclones import router as cyclones_router
 from backend.app.api.v1.lightning import router as lightning_router
 from backend.app.api.v1.wildfires import router as wildfires_router
 from backend.app.api.v1.air_quality import router as air_quality_router
+from backend.app.api.v1.location import router as location_router
+from backend.app.api.v1.status import router as status_router
 from backend.app.api.v1.sources import router as sources_router
 from backend.app.api.v1.correlation import router as correlation_router
 from backend.app.api.v1.ai import router as ai_router
@@ -24,6 +27,7 @@ from backend.app.api.v1.mobile import router as mobile_router
 api_router = APIRouter()
 
 api_router.include_router(weather_router)
+api_router.include_router(forecast_router)
 api_router.include_router(hazards_router)
 api_router.include_router(alerts_router)
 api_router.include_router(earthquakes_router)
@@ -32,6 +36,8 @@ api_router.include_router(cyclones_router)
 api_router.include_router(lightning_router)
 api_router.include_router(wildfires_router)
 api_router.include_router(air_quality_router)
+api_router.include_router(location_router)
+api_router.include_router(status_router)
 api_router.include_router(sources_router)
 api_router.include_router(correlation_router)
 api_router.include_router(ai_router)

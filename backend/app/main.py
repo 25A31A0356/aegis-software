@@ -3,14 +3,16 @@ AEGIS UNIFIED DATA CORE - Main FastAPI Application
 Production-Ready Real-Time Weather & Multi-Hazard Data Infrastructure
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.config import settings
-from backend.app.database.session import init_db
+from backend.app.database.session import init_db, get_db
 from backend.app.scheduler.job_scheduler import start_scheduler, stop_scheduler, sync_scheduler_jobs
 from backend.app.api.v1.router import api_router
+from backend.app.api.v1.health import check_overall_health
 from backend.app.core.exceptions import AegisCoreException
 from backend.app.utils.logger import logger
 
@@ -107,7 +109,14 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# 4. Include Master API v1 Router
+# 4. Top-level Container Orchestrator Health Probe
+@app.get("/health", tags=["System Health & Observability"])
+async def root_health(db: AsyncSession = Depends(get_db)):
+    """Top-level health probe for Kubernetes/Docker container lifecycle."""
+    return await check_overall_health(db)
+
+
+# 5. Include Master API v1 Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Also mount on /api for seamless backward compatibility with existing frontend
@@ -121,5 +130,6 @@ async def root():
         "version": settings.VERSION,
         "status": "OPERATIONAL",
         "docs_url": "/docs",
-        "api_v1": "/api/v1"
+        "api_v1": "/api/v1",
+        "health": "/health"
     }

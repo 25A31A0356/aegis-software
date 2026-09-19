@@ -1,11 +1,13 @@
 """
 AEGIS UNIFIED DATA CORE - API Dependencies & Security Guards
-Handles DB session injection, JWT authentication, RBAC authorization, and Sliding-Window Rate Limiting.
+Handles DB session injection, JWT authentication, RBAC authorization, Client Context, and Sliding-Window Rate Limiting.
 """
 import time
-from typing import AsyncGenerator, Optional
-from fastapi import Depends, HTTPException, Security, Request, status
+from enum import Enum
+from typing import AsyncGenerator, Optional, Dict, Any
+from fastapi import Depends, HTTPException, Security, Request, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.app.database.session import get_db
@@ -16,6 +18,20 @@ from backend.app.cache.redis_client import CacheManager
 from backend.app.utils.logger import logger
 
 security_scheme = HTTPBearer(auto_error=False)
+
+
+class ClientType(str, Enum):
+    WEB = "web"
+    APP = "app"
+    ADMIN = "admin"
+    INTERNAL_SERVICE = "internal"
+
+
+class ClientContext(BaseModel):
+    client_type: ClientType
+    user: Optional[Dict[str, Any]] = None if False else None
+    client_ip: str
+    is_admin: bool = False
 
 
 async def get_current_user(
@@ -58,6 +74,42 @@ async def require_admin_role(
             detail="Access restricted to administrative and disaster response personnel."
         )
     return user
+
+
+async def get_client_context(
+    request: Request,
+    x_aegis_client: Optional[str] = Header(default=None, alias="X-Aegis-Client"),
+    user: Optional[User] = Depends(get_current_user)
+) -> ClientContext:
+    """
+    Extracts caller client context distinguishing WEB, APP, ADMIN, and INTERNAL_SERVICE.
+    """
+    client_ip = request.client.host if request.client else "127.0.0.1"
+
+    # If authenticated admin user
+    if user and user.role in ("admin", "official"):
+        return ClientContext(
+            client_type=ClientType.ADMIN,
+            client_ip=client_ip,
+            is_admin=True
+        )
+
+    # Check client header
+    c_type = ClientType.WEB
+    if x_aegis_client:
+        clean_c = x_aegis_client.strip().lower()
+        if clean_c == "app":
+            c_type = ClientType.APP
+        elif clean_c == "internal":
+            c_type = ClientType.INTERNAL_SERVICE
+        elif clean_c == "admin" and user and user.role in ("admin", "official"):
+            c_type = ClientType.ADMIN
+
+    return ClientContext(
+        client_type=c_type,
+        client_ip=client_ip,
+        is_admin=False
+    )
 
 
 async def rate_limit_check(request: Request):
