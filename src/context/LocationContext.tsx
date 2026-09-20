@@ -251,10 +251,33 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     requestCurrentGPS();
   }, [requestCurrentGPS]);
 
-  // Initial load
+  // Initial load: Attempt automatic GPS acquisition on launch, fallback to saved or Mumbai
   useEffect(() => {
-    selectLocationItem('Mumbai');
-  }, []);
+    let isMounted = true;
+
+    const initLocation = async () => {
+      // 1. Check if browser supports geolocation and try live GPS
+      if (typeof window !== 'undefined' && navigator.geolocation) {
+        try {
+          const success = await requestCurrentGPS();
+          if (success || !isMounted) return;
+        } catch (e) {
+          console.warn('[LocationContext] Automatic GPS request skipped/denied:', e);
+        }
+      }
+
+      // 2. Fallback to default/saved station if GPS was unavailable or denied
+      if (isMounted) {
+        selectLocationItem('Mumbai');
+      }
+    };
+
+    initLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [requestCurrentGPS, selectLocationItem]);
 
   return (
     <LocationContext.Provider
