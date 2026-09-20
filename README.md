@@ -221,13 +221,13 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Victim as 🔴 Trapped Citizen (Mobile App)
-    participant Gateway as 🛡️ FastAPI Gateway (/api/v1/sos)
-    participant Matcher as 📍 Geospatial Matching Engine
-    participant DB as 🗄️ PostgreSQL Database
-    participant Hub as ⚡ RealtimeHub (WebSocket)
-    actor Responder as 🟢 Nearby Volunteer / NDRF Unit
-    actor Dispatcher as 👮 Incident Commander (Web Console)
+    actor Victim as Trapped Citizen (Mobile App)
+    participant Gateway as FastAPI Gateway (/api/v1/sos)
+    participant Matcher as Geospatial Matching Engine
+    participant DB as PostgreSQL Database
+    participant Hub as RealtimeHub (WebSocket)
+    actor Responder as Nearby Volunteer / NDRF Unit
+    actor Dispatcher as Incident Commander (Web Console)
 
     Victim->>Gateway: POST /api/v1/sos (lat, lng, flash_flood, 3 victims)
     Gateway->>DB: INSERT aegis_sos_signals (Status: TRIGGERED, Priority: 92)
@@ -245,7 +245,7 @@ sequenceDiagram
     Responder->>Gateway: POST /api/v1/sos/:id/respond (Action: ACCEPT)
     Gateway->>DB: Atomic Update (Status: ACCEPTED, Assigned: Responder_1)
     Gateway->>Hub: Broadcast SOS_ACCEPTED (ETA: 6 mins)
-    Hub-->>Victim: Victim Screen: "Volunteer Mohan is En Route (4.2 km)"
+    Hub-->>Victim: Victim Screen: Volunteer Mohan is En Route (4.2 km)
 
     loop Live GPS Stream (Every 5 seconds)
         Responder->>Gateway: POST /api/v1/sos/:id/responder-location (lat, lng, eta)
@@ -381,7 +381,7 @@ erDiagram
 
     AEGIS_USER_PREFERENCES {
         string id PK
-        string user_id FK UK
+        string user_id FK
         json saved_locations
         json hazard_subscriptions
         boolean push_enabled
@@ -518,7 +518,7 @@ erDiagram
 
 ```mermaid
 flowchart TD
-    subgraph Ingestion_Layer ["📡 Layer 1: Multi-Hazard Telemetry Ingestion"]
+    subgraph Ingestion_Layer ["Layer 1: Multi-Hazard Telemetry Ingestion"]
         IMD["IMD Doppler Radar & Cyclone Feeds"]
         CWC["CWC River Gauges & Dam Levels"]
         CPCB["CPCB Air Quality Index (NAQI)"]
@@ -528,7 +528,7 @@ flowchart TD
         METEO["Open-Meteo High-Resolution NWP"]
     end
 
-    subgraph Core_Layer ["🛡️ Layer 2: Core Processing & AI Intelligence"]
+    subgraph Core_Layer ["Layer 2: Core Processing & AI Intelligence"]
         Pipeline["Ingestion Pipeline & Deduplicator"]
         Correlator["Multi-Hazard Correlation Engine"]
         AI_Layer["AI Context Layer (Gemini 1.5 Flash + Local)"]
@@ -538,7 +538,7 @@ flowchart TD
         WS_Hub["Realtime WebSocket & SSE Hub"]
     end
 
-    subgraph Presentation_Layer ["💻 Layer 3: Presentation & User Applications"]
+    subgraph Presentation_Layer ["Layer 3: Presentation & User Applications"]
         Web_Command["Web Command Center (React 19 + Leaflet GIS)"]
         Mobile_App["Citizen Mobile App (React Native Expo SDK 54)"]
     end
