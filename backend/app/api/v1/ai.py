@@ -3,7 +3,7 @@ AEGIS UNIFIED DATA CORE - AI/ML Disaster Intelligence & Context Synthesis API
 /api/v1/ai
 """
 from typing import Dict, Any, List
-from fastapi import APIRouter, Depends, Query, Body
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from backend.app.schemas.common import ApiResponse, ProvenanceMetadata
 from backend.app.engines.ai_layer import AIIntelligenceLayer

@@ -3,7 +3,6 @@ AEGIS UNIFIED DATA CORE - Weather Telemetry API
 /api/v1/weather
 """
 from typing import Optional
-from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -99,6 +98,9 @@ async def get_weather(
         raise HTTPException(status_code=502, detail="Unable to parse meteorological provider response.")
 
     norm = provider.normalize(parsed[0])
+    if not norm:
+        raise HTTPException(status_code=502, detail="Unable to normalize meteorological observation.")
+
     m = norm.measurements
     temp = m.get("temperature_c", 30.0)
     wind = m.get("wind_speed_kmh", 12.0)

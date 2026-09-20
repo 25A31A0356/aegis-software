@@ -6,15 +6,16 @@ Rapido-like offers, atomic race condition resolution, privacy preservation, turn
 live breadcrumb tracking, and cross-platform synchronization for Aegis Web and Aegis Alert App.
 """
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, and_, or_
+from sqlalchemy import select, desc, and_, or_, func
 from backend.app.database.session import get_db
 from backend.app.database.models import (
-    SOSSignal, SOSIncident, SOSResponderCandidate, SOSAssignment,
-    SOSLocationUpdate, SOSStatusHistory, SOSNotification, User, UserPreference, utc_now
+    SOSSignal, SOSResponderCandidate, SOSAssignment,
+    SOSLocationUpdate, User, UserPreference, SafeEvent,
+    EmergencyContact, ActivityEvent, utc_now
 )
 from backend.app.schemas.common import ApiResponse, FreshnessMetadata, ProvenanceMetadata
 from backend.app.api.deps import rate_limit_check, get_current_user
@@ -22,8 +23,9 @@ from backend.app.sos.state_machine import SOSStateMachine, SOSState
 from backend.app.sos.matching import SOSMatchingEngine
 from backend.app.sos.routing import SOSRoutingEngine
 from backend.app.sos.notifications import NotificationService
+from backend.app.providers.adapters.geographic import GeographicLocationProvider
+from backend.app.realtime.manager import EventBroker, manager
 from backend.app.core.config import settings
-from backend.app.utils.logger import logger
 
 router = APIRouter(prefix="/sos", tags=["Emergency SOS Nearby-Responder Network"])
 
@@ -51,7 +53,114 @@ class SOSCreateRequest(BaseModel):
     casualties_count: Optional[int] = Field(default=1, ge=1)
     device_id: Optional[str] = Field(default=None)
     requester_user_id: Optional[str] = Field(default=None)
+    idempotency_key: Optional[str] = Field(default=None, description="Offline idempotency token")
     emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+
+
+class SafeCreateRequest(BaseModel):
+    user_name: Optional[str] = Field(default="Citizen")
+    user_phone: Optional[str] = Field(default="")
+    message: Optional[str] = Field(default="I am safe and out of danger.", max_length=500)
+    latitude: float = Field(..., ge=-90.0, le=90.0)
+    longitude: float = Field(..., ge=-180.0, le=180.0)
+    accuracy_meters: Optional[float] = Field(default=10.0, ge=0.0)
+    location_name: Optional[str] = Field(default="")
+    district: Optional[str] = Field(default="")
+    state: Optional[str] = Field(default="")
+    country: Optional[str] = Field(default="India")
+    device_id: Optional[str] = Field(default=None)
+    user_id: Optional[str] = Field(default=None)
+    idempotency_key: Optional[str] = Field(default=None)
+    emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+
+
+class SafeResponseSchema(BaseModel):
+    id: str
+    user_id: Optional[str]
+    device_id: Optional[str]
+    sos_id: Optional[str]
+    user_name: str
+    user_phone_masked: str
+    status: str
+    message: str
+    latitude: float
+    longitude: float
+    accuracy_meters: Optional[float]
+    location_name: Optional[str]
+    district: Optional[str]
+    state: Optional[str]
+    country: str
+    contacts_notified_count: int
+    idempotency_key: Optional[str]
+    sync_status: str
+    recorded_at: str
+    created_at: str
+
+
+class OfflineSOSSyncItem(BaseModel):
+    idempotency_key: str = Field(..., description="Unique offline event idempotency UUID")
+    device_id: Optional[str] = None
+    user_id: Optional[str] = None
+    caller_name: Optional[str] = "Citizen in Distress"
+    caller_phone: Optional[str] = ""
+    emergency_type: Optional[str] = "general"
+    severity: Optional[str] = "CRITICAL"
+    short_message: Optional[str] = ""
+    latitude: float = Field(..., ge=-90.0, le=90.0)
+    longitude: float = Field(..., ge=-180.0, le=180.0)
+    accuracy_meters: Optional[float] = 10.0
+    battery_percent: Optional[int] = 100
+    medical_notes: Optional[str] = ""
+    recorded_at_client: Optional[str] = None
+    emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+
+
+class OfflineSafeSyncItem(BaseModel):
+    idempotency_key: str = Field(..., description="Unique offline safe event idempotency UUID")
+    device_id: Optional[str] = None
+    user_id: Optional[str] = None
+    user_name: Optional[str] = "Citizen"
+    user_phone: Optional[str] = ""
+    message: Optional[str] = "I am safe and out of danger."
+    latitude: float = Field(..., ge=-90.0, le=90.0)
+    longitude: float = Field(..., ge=-180.0, le=180.0)
+    accuracy_meters: Optional[float] = 10.0
+    recorded_at_client: Optional[str] = None
+    emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+
+
+class OfflineSyncBatchRequest(BaseModel):
+    sos_events: List[OfflineSOSSyncItem] = Field(default_factory=list)
+    safe_events: List[OfflineSafeSyncItem] = Field(default_factory=list)
+
+
+class OfflineSyncBatchResponse(BaseModel):
+    synced_sos_count: int
+    synced_safe_count: int
+    sos_results: List[Dict[str, Any]]
+    safe_results: List[Dict[str, Any]]
+
+
+class EmergencyContactCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    phone: str = Field(..., min_length=7, max_length=20)
+    relationship: str = Field(default="Family", max_length=50)
+    email: Optional[str] = None
+    notify_on_sos: bool = True
+    notify_on_safe: bool = True
+
+
+class EmergencyContactResponseSchema(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    phone_masked: str
+    phone: str
+    relationship: str
+    email: Optional[str]
+    notify_on_sos: bool
+    notify_on_safe: bool
+    created_at: str
 
 
 class SOSLocationUpdateRequest(BaseModel):
@@ -145,6 +254,31 @@ def _mask_phone(phone: str) -> str:
     return f"{phone[:3]} ***** {phone[-2:]}" if len(phone) >= 7 else f"***{phone[-2:]}"
 
 
+def _build_safe_response(safe: SafeEvent) -> SafeResponseSchema:
+    return SafeResponseSchema(
+        id=safe.id,
+        user_id=safe.user_id,
+        device_id=safe.device_id,
+        sos_id=safe.sos_id,
+        user_name=safe.user_name,
+        user_phone_masked=_mask_phone(safe.user_phone),
+        status=safe.status,
+        message=safe.message or "I am safe.",
+        latitude=safe.latitude,
+        longitude=safe.longitude,
+        accuracy_meters=safe.accuracy_meters,
+        location_name=safe.location_name or "",
+        district=safe.district or "",
+        state=safe.state or "",
+        country=safe.country or "India",
+        contacts_notified_count=safe.contacts_notified_count,
+        idempotency_key=safe.idempotency_key,
+        sync_status=safe.sync_status,
+        recorded_at=safe.recorded_at.isoformat() if safe.recorded_at else "",
+        created_at=safe.created_at.isoformat() if safe.created_at else "",
+    )
+
+
 def _build_sos_response(
     sos: SOSSignal,
     is_authorized: bool = False,
@@ -222,7 +356,25 @@ async def create_sos_incident(
     now = utc_now()
     expires = now + timedelta(minutes=settings.SOS_EXPIRATION_MINUTES)
 
-    # 1. Deduplication check: prevent accidental double SOS within 2 minutes for same user/device
+    # 1. Idempotency Check: if client submitted with idempotency_key, return existing record
+    if payload.idempotency_key:
+        idem_res = await db.execute(
+            select(SOSSignal).where(SOSSignal.idempotency_key == payload.idempotency_key)
+        )
+        idem_sos = idem_res.scalars().first()
+        if idem_sos:
+            return ApiResponse(
+                success=True,
+                data=_build_sos_response(idem_sos, is_authorized=True),
+                freshness=FreshnessMetadata(status="fresh", age_seconds=0),
+                provenance=ProvenanceMetadata(
+                    data_type="official_observation",
+                    source_authority="AEGIS SOS Responder Core (Idempotent Cached)",
+                    processing_version="1.0.0"
+                )
+            )
+
+    # 2. Deduplication check: prevent accidental double SOS within active session for same user/device
     existing_q = select(SOSSignal).where(
         SOSSignal.status.in_([SOSState.PENDING.value, SOSState.MATCHING.value, SOSState.OFFERED.value, SOSState.ACCEPTED.value]),
         or_(
@@ -233,7 +385,6 @@ async def create_sos_incident(
     existing_res = await db.execute(existing_q)
     existing_active = existing_res.scalars().first()
     if existing_active:
-        # Return existing active SOS without creating duplicate
         return ApiResponse(
             success=True,
             data=_build_sos_response(existing_active, is_authorized=True),
@@ -245,7 +396,20 @@ async def create_sos_incident(
             )
         )
 
-    # 2. Create SOS entity
+    # 3. Offline Reverse Geocoding for Missing District / State / Address
+    req_state = payload.state
+    req_district = payload.district
+    req_city = payload.city
+    req_address = payload.address
+    if not req_state or not req_district or not req_address:
+        geo_info = GeographicLocationProvider.reverse_geocode_offline(payload.latitude, payload.longitude)
+        req_state = req_state or geo_info.get("state")
+        req_district = req_district or geo_info.get("district")
+        req_city = req_city or geo_info.get("city")
+        req_address = req_address or geo_info.get("formatted_address")
+
+
+    # 4. Create SOS entity
     sos = SOSSignal(
         device_id=payload.device_id,
         user_id=user_id,
@@ -261,14 +425,17 @@ async def create_sos_incident(
         accuracy_meters=payload.accuracy_meters or 10.0,
         location_timestamp=now,
         last_location_update=now,
-        address=payload.address or "",
-        city=payload.city or "",
-        district=payload.district or "",
-        state=payload.state or "",
+        address=req_address or "",
+        city=req_city or "",
+        district=req_district or "",
+        state=req_state or "",
         country=payload.country or "India",
         battery_percent=payload.battery_percent if payload.battery_percent is not None else 100,
         medical_notes=payload.medical_notes or "",
         casualties_count=payload.casualties_count or 1,
+        idempotency_key=payload.idempotency_key,
+        sync_status="SYNCED",
+        raw_payload=payload.model_dump(),
         expires_at=expires,
         created_at=now,
         updated_at=now
@@ -290,7 +457,33 @@ async def create_sos_incident(
     )
     db.add(loc_update)
 
-    # 3. Transition to MATCHING
+    # Log Activity Event
+    activity = ActivityEvent(
+        event_type="SOS_CREATED",
+        entity_type="SOS",
+        entity_id=sos.id,
+        title=f"SOS Distress Alert: {sos.emergency_type.upper()}",
+        description=sos.short_message or f"Distress signal reported in {sos.district or sos.state or 'India'}",
+        category=sos.emergency_type.upper(),
+        severity=sos.severity.upper(),
+        latitude=sos.latitude,
+        longitude=sos.longitude,
+        location_name=sos.address or f"{sos.district or ''}, {sos.state or ''}",
+        city=sos.city or "",
+        state=sos.state or "",
+        source="CITIZEN",
+        verification_status="ACTIVE_DISTRESS",
+        payload={
+            "sos_id": sos.id,
+            "emergency_type": sos.emergency_type,
+            "severity": sos.severity,
+            "casualties_count": sos.casualties_count
+        },
+        created_at=now
+    )
+    db.add(activity)
+
+    # 5. Transition to MATCHING
     await SOSStateMachine.transition(
         db=db,
         sos=sos,
@@ -299,7 +492,7 @@ async def create_sos_incident(
         reason="Automated matching initiated"
     )
 
-    # 4. Notify family / emergency contacts
+    # 6. Notify family / emergency contacts
     contacts = payload.emergency_contacts
     if not contacts and user_id:
         pref_res = await db.execute(select(UserPreference).where(UserPreference.user_id == user_id))
@@ -310,10 +503,10 @@ async def create_sos_incident(
     if contacts:
         await NotificationService.notify_emergency_contacts(db, sos, contacts)
 
-    # 5. Discover nearby responders (10km initial, expanding up to 20km)
+    # 7. Discover nearby responders (10km initial, expanding up to 20km)
     candidates = await SOSMatchingEngine.find_eligible_responders(db, sos)
 
-    # 6. If candidates found, transition to OFFERED and dispatch notifications
+    # 8. If candidates found, transition to OFFERED and dispatch notifications
     if candidates:
         await SOSStateMachine.transition(
             db=db,
@@ -327,7 +520,7 @@ async def create_sos_incident(
     await db.commit()
     await db.refresh(sos)
 
-    # 7. Broadcast real-time event across Web & App
+    # 9. Broadcast real-time event across Web & App
     await NotificationService.broadcast_sos_event(
         event_name="SOS_CREATED",
         sos=sos,
@@ -344,6 +537,7 @@ async def create_sos_incident(
             processing_version="1.0.0"
         )
     )
+
 
 
 @router.get("", response_model=ApiResponse[List[SOSResponseSchema]])
@@ -439,6 +633,713 @@ async def get_nearby_sos_offers(
     )
 
 
+
+# ==============================================================================
+# ACTIVE SOS MAP FEED
+# ==============================================================================
+
+@router.get("/map/feed", response_model=ApiResponse[List[SOSResponseSchema]])
+async def get_sos_map_feed(
+    bbox: Optional[str] = Query(default=None, description="Bounding box min_lon,min_lat,max_lon,max_lat"),
+    state: Optional[str] = Query(default=None, description="Filter by Indian State"),
+    district: Optional[str] = Query(default=None, description="Filter by District"),
+    severity: Optional[str] = Query(default=None, description="Filter by severity"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """
+    ACTIVE SOS MAP FEED:
+    Returns active distress markers for Web and App map displays.
+    Applies privacy redaction (approximate coordinates, masked identities) for non-operator callers.
+    """
+    is_admin = bool(current_user and current_user.role in ("admin", "official", "sdrf_officer", "responder"))
+    query = select(SOSSignal).where(
+        SOSSignal.status.in_([
+            SOSState.PENDING.value, SOSState.MATCHING.value, SOSState.OFFERED.value,
+            SOSState.ACCEPTED.value, SOSState.RESPONDER_EN_ROUTE.value, SOSState.ON_SITE.value
+        ])
+    ).order_by(desc(SOSSignal.created_at)).limit(100)
+
+    if state:
+        query = query.where(SOSSignal.state.ilike(f"%{state}%"))
+    if district:
+        query = query.where(SOSSignal.district.ilike(f"%{district}%"))
+    if severity:
+        query = query.where(SOSSignal.severity == severity.upper())
+
+    if bbox:
+        try:
+            parts = [float(p.strip()) for p in bbox.split(",")]
+            if len(parts) == 4:
+                min_lon, min_lat, max_lon, max_lat = parts
+                query = query.where(
+                    SOSSignal.longitude >= min_lon,
+                    SOSSignal.longitude <= max_lon,
+                    SOSSignal.latitude >= min_lat,
+                    SOSSignal.latitude <= max_lat
+                )
+        except Exception:
+            pass
+
+    res = await db.execute(query)
+    rows = res.scalars().all()
+
+    items = [_build_sos_response(s, is_authorized=is_admin) for s in rows]
+
+    return ApiResponse(
+        success=True,
+        data=items,
+        freshness=FreshnessMetadata(status="fresh", age_seconds=2),
+        provenance=ProvenanceMetadata(
+            data_type="official_observation",
+            source_authority="AEGIS Unified Map Radar",
+            processing_version="1.0.0"
+        )
+    )
+
+
+@router.post("/responder/profile", response_model=ApiResponse[Dict[str, Any]])
+async def update_responder_profile(
+    payload: SOSResponderProfileRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    Registers or updates citizen responder opt-in participation, availability status,
+    emergency contacts, and latest GPS coordinates.
+    """
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User authentication required.")
+
+    # Ensure user exists or create development citizen record
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user_obj = user_res.scalars().first()
+    if not user_obj:
+        user_obj = User(
+            id=user_id,
+            email=f"{user_id}@aegis.citizen",
+            hashed_password="mock_hashed_password",
+            full_name="Aegis Responder",
+            role="responder",
+            is_active=True
+        )
+        db.add(user_obj)
+        await db.commit()
+        await db.refresh(user_obj)
+
+    pref_res = await db.execute(select(UserPreference).where(UserPreference.user_id == user_id))
+    pref = pref_res.scalars().first()
+
+    now = utc_now()
+    if not pref:
+        pref = UserPreference(
+            user_id=user_id,
+            is_responder_opted_in=payload.is_responder_opted_in,
+            is_available=payload.is_available,
+            last_known_lat=payload.latitude,
+            last_known_lng=payload.longitude,
+            last_location_time=now if payload.latitude is not None else None,
+            emergency_contacts=payload.emergency_contacts or []
+        )
+        db.add(pref)
+    else:
+        pref.is_responder_opted_in = payload.is_responder_opted_in
+        pref.is_available = payload.is_available
+        if payload.latitude is not None and payload.longitude is not None:
+            pref.last_known_lat = payload.latitude
+            pref.last_known_lng = payload.longitude
+            pref.last_location_time = now
+        if payload.emergency_contacts is not None:
+            pref.emergency_contacts = payload.emergency_contacts
+        pref.updated_at = now
+
+    await db.commit()
+
+    return ApiResponse(
+        success=True,
+        data={
+            "user_id": user_id,
+            "is_responder_opted_in": pref.is_responder_opted_in,
+            "is_available": pref.is_available,
+            "last_known_lat": pref.last_known_lat,
+            "last_known_lng": pref.last_known_lng,
+            "emergency_contacts_count": len(pref.emergency_contacts or [])
+        },
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+    )
+
+
+# ==============================================================================
+# SAFE ("I AM SAFE") ENDPOINTS
+# ==============================================================================
+
+
+@router.post("/safe", response_model=ApiResponse[SafeResponseSchema], dependencies=[Depends(rate_limit_check)])
+async def declare_safe_incident(
+    payload: SafeCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    CITIZEN DECLARES "I AM SAFE":
+    1. Idempotency Check: Returns existing safe event if idempotency_key was already processed.
+    2. Auto-Reverse Geocoding: Fills missing location, district, state from centroid coordinates.
+    3. Auto SOS Resolution: If citizen has an active SOS in progress, immediately marks it as RESOLVED
+       (reason: 'Citizen declared SAFE'), completes responder assignments, and broadcasts SOS_RESOLVED.
+    4. Notifies registered family/emergency contacts with safety status and coordinates.
+    5. Dispatches real-time SAFE_CREATED event across Web & App.
+    6. Logs event in Unified Activity Feed.
+    """
+    user_id = (current_user.id if current_user else None) or payload.user_id or x_aegis_user_id
+    now = utc_now()
+
+    # 1. Idempotency check
+    if payload.idempotency_key:
+        idem_res = await db.execute(select(SafeEvent).where(SafeEvent.idempotency_key == payload.idempotency_key))
+        idem_safe = idem_res.scalars().first()
+        if idem_safe:
+            return ApiResponse(
+                success=True,
+                data=_build_safe_response(idem_safe),
+                freshness=FreshnessMetadata(status="fresh", age_seconds=0),
+                provenance=ProvenanceMetadata(
+                    data_type="official_observation",
+                    source_authority="AEGIS Safety Registry (Idempotent Cached)",
+                    processing_version="1.0.0"
+                )
+            )
+
+    # 2. Offline reverse geocoding if missing
+    req_state = payload.state
+    req_district = payload.district
+    req_loc_name = payload.location_name
+    if not req_state or not req_district or not req_loc_name:
+        geo_info = GeographicLocationProvider.reverse_geocode_offline(payload.latitude, payload.longitude)
+        req_state = req_state or geo_info.get("state")
+        req_district = req_district or geo_info.get("district")
+        req_loc_name = req_loc_name or geo_info.get("formatted_address")
+
+
+    # 3. Check for active SOS signal to auto-resolve
+    active_sos = None
+    if user_id or payload.device_id:
+        sos_q = select(SOSSignal).where(
+            SOSSignal.status.in_([
+                SOSState.PENDING.value, SOSState.MATCHING.value, SOSState.OFFERED.value,
+                SOSState.ACCEPTED.value, SOSState.RESPONDER_EN_ROUTE.value, SOSState.ON_SITE.value
+            ]),
+            or_(
+                and_(SOSSignal.user_id != None, SOSSignal.user_id == user_id),
+                and_(SOSSignal.device_id != None, SOSSignal.device_id == payload.device_id)
+            )
+        )
+        sos_res = await db.execute(sos_q)
+        active_sos = sos_res.scalars().first()
+
+    if active_sos:
+        active_sos.resolution_notes = "Citizen declared SAFE"
+        await SOSStateMachine.transition(
+            db=db,
+            sos=active_sos,
+            target_state=SOSState.RESOLVED.value,
+            changed_by_user_id=user_id,
+            reason="Citizen declared SAFE"
+        )
+        # Complete active assignments
+        assign_res = await db.execute(
+            select(SOSAssignment).where(SOSAssignment.sos_id == active_sos.id, SOSAssignment.status == "ACTIVE")
+        )
+        active_assign = assign_res.scalars().first()
+        if active_assign:
+            active_assign.status = "COMPLETED"
+
+        await NotificationService.broadcast_sos_event(
+            event_name="SOS_RESOLVED",
+            sos=active_sos,
+            extra_data={"resolution_notes": "Citizen declared SAFE", "resolved_by": "SAFE_DECLARATION"}
+        )
+
+    # 4. Create SafeEvent
+    safe_event = SafeEvent(
+        user_id=user_id,
+        device_id=payload.device_id,
+        sos_id=active_sos.id if active_sos else None,
+        user_name=payload.user_name or (current_user.full_name if current_user else "Citizen"),
+        user_phone=payload.user_phone or (current_user.email if current_user else ""),
+        status="SAFE",
+        message=payload.message or "I am safe and out of danger.",
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        accuracy_meters=payload.accuracy_meters or 10.0,
+        location_name=req_loc_name or "",
+        district=req_district or "",
+        state=req_state or "",
+        country=payload.country or "India",
+        idempotency_key=payload.idempotency_key,
+        sync_status="SYNCED",
+        recorded_at=now,
+        created_at=now,
+        updated_at=now
+    )
+    db.add(safe_event)
+    await db.commit()
+    await db.refresh(safe_event)
+
+    # 5. Notify emergency contacts
+    contacts = payload.emergency_contacts
+    if not contacts and user_id:
+        pref_res = await db.execute(select(UserPreference).where(UserPreference.user_id == user_id))
+        pref = pref_res.scalars().first()
+        if pref and pref.emergency_contacts:
+            contacts = pref.emergency_contacts
+
+    notified_count = 0
+    if contacts:
+        notifs = await NotificationService.notify_safe_event(db, safe_event, contacts)
+        notified_count = len(notifs)
+        safe_event.contacts_notified_count = notified_count
+        await db.commit()
+        await db.refresh(safe_event)
+
+    # 6. Broadcast Real-time Safe Event
+    await NotificationService.broadcast_safe_event(
+        safe_event=safe_event,
+        extra_data={"resolved_sos_id": active_sos.id if active_sos else None}
+    )
+
+    # 7. Log Activity Event
+    activity = ActivityEvent(
+        event_type="CITIZEN_SAFE",
+        entity_type="SAFE",
+        entity_id=safe_event.id,
+        title=f"Citizen Safety Check-In: {safe_event.user_name}",
+        description=safe_event.message or "Citizen verified safe and out of danger.",
+        category="SAFETY_CHECKIN",
+        severity="LOW",
+        latitude=safe_event.latitude,
+        longitude=safe_event.longitude,
+        location_name=safe_event.location_name or f"{safe_event.district or ''}, {safe_event.state or ''}",
+        city=safe_event.district or "",
+        state=safe_event.state or "",
+        source="CITIZEN",
+        verification_status="VERIFIED",
+        payload={
+            "safe_event_id": safe_event.id,
+            "sos_id": active_sos.id if active_sos else None,
+            "contacts_notified": notified_count
+        },
+        created_at=now
+    )
+    db.add(activity)
+    await db.commit()
+
+    return ApiResponse(
+        success=True,
+        data=_build_safe_response(safe_event),
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0),
+        provenance=ProvenanceMetadata(
+            data_type="official_observation",
+            source_authority="AEGIS Safety Registry",
+            processing_version="1.0.0"
+        )
+    )
+
+
+@router.get("/safe", response_model=ApiResponse[List[SafeResponseSchema]])
+async def list_safe_events(
+    state: Optional[str] = Query(default=None, description="Filter by Indian State"),
+    district: Optional[str] = Query(default=None, description="Filter by District"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List recent citizen safety check-ins ("I AM SAFE" events).
+    """
+    query = select(SafeEvent).order_by(desc(SafeEvent.created_at)).limit(limit).offset(offset)
+    if state:
+        query = query.where(SafeEvent.state.ilike(f"%{state}%"))
+    if district:
+        query = query.where(SafeEvent.district.ilike(f"%{district}%"))
+
+    res = await db.execute(query)
+    rows = res.scalars().all()
+
+    items = [_build_safe_response(s) for s in rows]
+
+    return ApiResponse(
+        success=True,
+        data=items,
+        freshness=FreshnessMetadata(status="fresh", age_seconds=5),
+        provenance=ProvenanceMetadata(
+            data_type="official_observation",
+            source_authority="AEGIS Safety Registry",
+            processing_version="1.0.0"
+        )
+    )
+
+
+# ==============================================================================
+# OFFLINE BATCH SYNC ENDPOINTS
+# ==============================================================================
+
+
+@router.post("/sync", response_model=ApiResponse[OfflineSyncBatchResponse], dependencies=[Depends(rate_limit_check)])
+async def sync_offline_batch(
+    payload: OfflineSyncBatchRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    OFFLINE-FIRST SYNC BATCH GATEWAY:
+    Accepts queued offline SOS distress events and Safe declarations.
+    Enforces atomic idempotency by checking idempotency_key for each item.
+    Returns individual sync status and synchronized server IDs.
+    """
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id
+    now = utc_now()
+    sos_results = []
+    safe_results = []
+    synced_sos_count = 0
+    synced_safe_count = 0
+
+    # 1. Process Queued Offline SOS Events
+    for item in payload.sos_events:
+        item_user_id = item.user_id or user_id
+        # Check idempotency
+        idem_res = await db.execute(select(SOSSignal).where(SOSSignal.idempotency_key == item.idempotency_key))
+        existing_sos = idem_res.scalars().first()
+
+        if existing_sos:
+            sos_results.append({
+                "idempotency_key": item.idempotency_key,
+                "id": existing_sos.id,
+                "status": "ALREADY_SYNCED",
+                "sos_status": existing_sos.status,
+                "synced_at": existing_sos.created_at.isoformat()
+            })
+            continue
+
+        # Reverse geocode
+        geo_info = GeographicLocationProvider.reverse_geocode_offline(item.latitude, item.longitude)
+        state_name = geo_info.get("state") or "India"
+        district_name = geo_info.get("district") or ""
+        address = geo_info.get("formatted_address") or ""
+
+        sos = SOSSignal(
+            device_id=item.device_id,
+            user_id=item_user_id,
+            requester_user_id=item_user_id,
+            caller_name=item.caller_name or "Citizen in Distress",
+            caller_phone=item.caller_phone or "",
+            emergency_type=(item.emergency_type or "general").lower(),
+            severity=(item.severity or "CRITICAL").upper(),
+            short_message=item.short_message or "",
+            status=SOSState.PENDING.value,
+            latitude=item.latitude,
+            longitude=item.longitude,
+            accuracy_meters=item.accuracy_meters or 10.0,
+            location_timestamp=now,
+            last_location_update=now,
+            address=address,
+            district=district_name,
+            state=state_name,
+            country="India",
+            battery_percent=item.battery_percent if item.battery_percent is not None else 100,
+            medical_notes=item.medical_notes or "",
+            idempotency_key=item.idempotency_key,
+            sync_status="SYNCED",
+            raw_payload=item.model_dump(),
+            expires_at=now + timedelta(minutes=settings.SOS_EXPIRATION_MINUTES),
+            created_at=now,
+            updated_at=now
+        )
+        db.add(sos)
+        await db.commit()
+        await db.refresh(sos)
+
+        # Notify contacts
+        if item.emergency_contacts:
+            await NotificationService.notify_emergency_contacts(db, sos, item.emergency_contacts)
+
+        # Find nearby responders
+        candidates = await SOSMatchingEngine.find_eligible_responders(db, sos)
+        if candidates:
+            await SOSStateMachine.transition(
+                db=db,
+                sos=sos,
+                target_state=SOSState.OFFERED.value,
+                changed_by_user_id=item_user_id,
+                reason=f"Offline sync dispatched offers to {len(candidates)} nearby responders"
+            )
+            await NotificationService.notify_nearby_responders(db, sos, candidates)
+
+        await NotificationService.broadcast_sos_event(
+            event_name="SOS_CREATED",
+            sos=sos,
+            extra_data={"synced_from_offline": True, "candidate_count": len(candidates)}
+        )
+
+        synced_sos_count += 1
+        sos_results.append({
+            "idempotency_key": item.idempotency_key,
+            "id": sos.id,
+            "status": "SYNCED",
+            "sos_status": sos.status,
+            "synced_at": now.isoformat()
+        })
+
+    # 2. Process Queued Offline Safe Events
+    for s_item in payload.safe_events:
+        item_user_id = s_item.user_id or user_id
+        # Check idempotency
+        idem_res = await db.execute(select(SafeEvent).where(SafeEvent.idempotency_key == s_item.idempotency_key))
+        existing_safe = idem_res.scalars().first()
+
+        if existing_safe:
+            safe_results.append({
+                "idempotency_key": s_item.idempotency_key,
+                "id": existing_safe.id,
+                "status": "ALREADY_SYNCED",
+                "synced_at": existing_safe.created_at.isoformat()
+            })
+            continue
+
+        # Reverse geocode
+        geo_info = GeographicLocationProvider.reverse_geocode_offline(s_item.latitude, s_item.longitude)
+        state_name = geo_info.get("state") or "India"
+        district_name = geo_info.get("district") or ""
+        loc_name = geo_info.get("formatted_address") or ""
+
+
+        # Auto-resolve any active SOS
+        active_sos = None
+        if item_user_id or s_item.device_id:
+            sos_q = select(SOSSignal).where(
+                SOSSignal.status.in_([
+                    SOSState.PENDING.value, SOSState.MATCHING.value, SOSState.OFFERED.value,
+                    SOSState.ACCEPTED.value, SOSState.RESPONDER_EN_ROUTE.value, SOSState.ON_SITE.value
+                ]),
+                or_(
+                    and_(SOSSignal.user_id != None, SOSSignal.user_id == item_user_id),
+                    and_(SOSSignal.device_id != None, SOSSignal.device_id == s_item.device_id)
+                )
+            )
+            sos_res = await db.execute(sos_q)
+            active_sos = sos_res.scalars().first()
+
+        if active_sos:
+            active_sos.resolution_notes = "Citizen declared SAFE via offline sync"
+            await SOSStateMachine.transition(
+                db=db,
+                sos=active_sos,
+                target_state=SOSState.RESOLVED.value,
+                changed_by_user_id=item_user_id,
+                reason="Citizen declared SAFE via offline sync"
+            )
+            await NotificationService.broadcast_sos_event(
+                event_name="SOS_RESOLVED",
+                sos=active_sos,
+                extra_data={"resolution_notes": "Citizen declared SAFE via offline sync"}
+            )
+
+        safe_event = SafeEvent(
+            user_id=item_user_id,
+            device_id=s_item.device_id,
+            sos_id=active_sos.id if active_sos else None,
+            user_name=s_item.user_name or "Citizen",
+            user_phone=s_item.user_phone or "",
+            status="SAFE",
+            message=s_item.message or "I am safe and out of danger.",
+            latitude=s_item.latitude,
+            longitude=s_item.longitude,
+            accuracy_meters=s_item.accuracy_meters or 10.0,
+            location_name=loc_name,
+            district=district_name,
+            state=state_name,
+            country="India",
+            idempotency_key=s_item.idempotency_key,
+            sync_status="SYNCED",
+            recorded_at=now,
+            created_at=now,
+            updated_at=now
+        )
+        db.add(safe_event)
+        await db.commit()
+        await db.refresh(safe_event)
+
+        if s_item.emergency_contacts:
+            await NotificationService.notify_safe_event(db, safe_event, s_item.emergency_contacts)
+
+        await NotificationService.broadcast_safe_event(safe_event=safe_event)
+
+        synced_safe_count += 1
+        safe_results.append({
+            "idempotency_key": s_item.idempotency_key,
+            "id": safe_event.id,
+            "status": "SYNCED",
+            "synced_at": now.isoformat()
+        })
+
+    return ApiResponse(
+        success=True,
+        data=OfflineSyncBatchResponse(
+            synced_sos_count=synced_sos_count,
+            synced_safe_count=synced_safe_count,
+            sos_results=sos_results,
+            safe_results=safe_results
+        ),
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0),
+        provenance=ProvenanceMetadata(
+            data_type="official_observation",
+            source_authority="AEGIS Offline-First Sync Gateway",
+            processing_version="1.0.0"
+        )
+    )
+
+
+
+# ==============================================================================
+# EMERGENCY CONTACTS CRUD ENDPOINTS
+# ==============================================================================
+
+@router.get("/contacts", response_model=ApiResponse[List[EmergencyContactResponseSchema]])
+async def list_emergency_contacts(
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    List registered emergency contacts for the authenticated citizen.
+    """
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id
+    if not user_id:
+        return ApiResponse(success=True, data=[], freshness=FreshnessMetadata(status="fresh", age_seconds=0))
+
+    query = select(EmergencyContact).where(EmergencyContact.user_id == user_id).order_by(EmergencyContact.created_at.asc())
+    res = await db.execute(query)
+    contacts = res.scalars().all()
+
+    items = [
+        EmergencyContactResponseSchema(
+            id=c.id,
+            user_id=c.user_id,
+            name=c.name,
+            phone_masked=_mask_phone(c.phone),
+            phone=c.phone,
+            relationship=c.relationship,
+            email=c.email,
+            notify_on_sos=c.notify_on_sos,
+            notify_on_safe=c.notify_on_safe,
+            created_at=c.created_at.isoformat() if c.created_at else ""
+        )
+        for c in contacts
+    ]
+
+    return ApiResponse(
+        success=True,
+        data=items,
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+    )
+
+
+@router.post("/contacts", response_model=ApiResponse[EmergencyContactResponseSchema])
+async def create_emergency_contact(
+    payload: EmergencyContactCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    Registers a new trusted emergency contact for automated SOS & Safe alert delivery.
+    """
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User authentication required.")
+
+    # Ensure user exists
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user_obj = user_res.scalars().first()
+    if not user_obj:
+        user_obj = User(
+            id=user_id,
+            email=f"{user_id}@aegis.citizen",
+            hashed_password="mock_hashed_password",
+            full_name="Aegis Citizen",
+            role="public",
+            is_active=True
+        )
+        db.add(user_obj)
+        await db.commit()
+        await db.refresh(user_obj)
+
+    contact = EmergencyContact(
+        user_id=user_id,
+        name=payload.name,
+        phone=payload.phone,
+        relationship=payload.relationship,
+        email=payload.email,
+        notify_on_sos=payload.notify_on_sos,
+        notify_on_safe=payload.notify_on_safe,
+        created_at=utc_now(),
+        updated_at=utc_now()
+    )
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+
+    return ApiResponse(
+        success=True,
+        data=EmergencyContactResponseSchema(
+            id=contact.id,
+            user_id=contact.user_id,
+            name=contact.name,
+            phone_masked=_mask_phone(contact.phone),
+            phone=contact.phone,
+            relationship=contact.relationship,
+            email=contact.email,
+            notify_on_sos=contact.notify_on_sos,
+            notify_on_safe=contact.notify_on_safe,
+            created_at=contact.created_at.isoformat() if contact.created_at else ""
+        ),
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+    )
+
+
+@router.delete("/contacts/{contact_id}", response_model=ApiResponse[Dict[str, Any]])
+async def delete_emergency_contact(
+    contact_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    Deletes an emergency contact.
+    """
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id
+    res = await db.execute(select(EmergencyContact).where(EmergencyContact.id == contact_id))
+    contact = res.scalars().first()
+    if not contact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Emergency contact not found.")
+
+    if user_id and contact.user_id != user_id and not (current_user and current_user.role == "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this contact.")
+
+    await db.delete(contact)
+    await db.commit()
+
+    return ApiResponse(
+        success=True,
+        data={"contact_id": contact_id, "deleted": True, "message": "Emergency contact removed successfully."},
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+    )
+
+
+
 @router.get("/{sos_id}", response_model=ApiResponse[SOSResponseSchema])
 async def get_sos_details(
     sos_id: str,
@@ -513,7 +1414,7 @@ async def accept_sos_offer(
         responder_user_id=responder_id
     )
 
-    if not success:
+    if not success or not sos:
         if sos and sos.accepted_by:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -928,74 +1829,3 @@ async def cancel_sos_incident(
     )
 
 
-@router.post("/responder/profile", response_model=ApiResponse[Dict[str, Any]])
-async def update_responder_profile(
-    payload: SOSResponderProfileRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
-    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
-):
-    """
-    Registers or updates citizen responder opt-in participation, availability status,
-    emergency contacts, and latest GPS coordinates.
-    """
-    user_id = (current_user.id if current_user else None) or x_aegis_user_id
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User authentication required.")
-
-    # Ensure user exists or create development citizen record
-    user_res = await db.execute(select(User).where(User.id == user_id))
-    user_obj = user_res.scalars().first()
-    if not user_obj:
-        user_obj = User(
-            id=user_id,
-            email=f"{user_id}@aegis.citizen",
-            hashed_password="mock_hashed_password",
-            full_name="Aegis Responder",
-            role="responder",
-            is_active=True
-        )
-        db.add(user_obj)
-        await db.commit()
-        await db.refresh(user_obj)
-
-    pref_res = await db.execute(select(UserPreference).where(UserPreference.user_id == user_id))
-    pref = pref_res.scalars().first()
-
-    now = utc_now()
-    if not pref:
-        pref = UserPreference(
-            user_id=user_id,
-            is_responder_opted_in=payload.is_responder_opted_in,
-            is_available=payload.is_available,
-            last_known_lat=payload.latitude,
-            last_known_lng=payload.longitude,
-            last_location_time=now if payload.latitude is not None else None,
-            emergency_contacts=payload.emergency_contacts or []
-        )
-        db.add(pref)
-    else:
-        pref.is_responder_opted_in = payload.is_responder_opted_in
-        pref.is_available = payload.is_available
-        if payload.latitude is not None and payload.longitude is not None:
-            pref.last_known_lat = payload.latitude
-            pref.last_known_lng = payload.longitude
-            pref.last_location_time = now
-        if payload.emergency_contacts is not None:
-            pref.emergency_contacts = payload.emergency_contacts
-        pref.updated_at = now
-
-    await db.commit()
-
-    return ApiResponse(
-        success=True,
-        data={
-            "user_id": user_id,
-            "is_responder_opted_in": pref.is_responder_opted_in,
-            "is_available": pref.is_available,
-            "last_known_lat": pref.last_known_lat,
-            "last_known_lng": pref.last_known_lng,
-            "emergency_contacts_count": len(pref.emergency_contacts or [])
-        },
-        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
-    )

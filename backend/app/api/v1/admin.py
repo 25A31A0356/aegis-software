@@ -8,10 +8,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from backend.app.database.session import get_db
-from backend.app.database.models import AuditLog, ProcessingJob, RawObservation, NormalizedObservation, User
+from backend.app.database.models import AuditLog, ProcessingJob, RawObservation, User
 from backend.app.schemas.common import ApiResponse
 from backend.app.core.security import verify_password, create_access_token
-from backend.app.api.deps import require_admin_role, get_current_user
+from backend.app.api.deps import require_admin_role
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 

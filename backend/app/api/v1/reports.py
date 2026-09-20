@@ -3,9 +3,9 @@ AEGIS UNIFIED DATA CORE - Authoritative Community & Incident Reports API
 /api/v1/reports
 Single Source of Truth for Aegis Web (Portal) and Aegis App (Mobile Alert).
 """
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func

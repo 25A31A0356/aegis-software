@@ -4,9 +4,8 @@ AEGIS UNIFIED DATA CORE - Data Sources & Field Mappings Management API
 Provides Administrator CRUD, secure credential encryption, Live API testing with SSRF protection,
 and automatic field detection preview.
 """
-import time
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
@@ -14,8 +13,8 @@ from backend.app.database.session import get_db
 from backend.app.database.models import DataSource, FieldMapping, AuditLog, User
 from backend.app.schemas.common import ApiResponse
 from backend.app.schemas.source import (
-    DataSourceCreate, DataSourceUpdate, DataSourceRead,
-    ApiTestRequest, ApiTestResponse, FieldMappingCreate, FieldMappingRead, DetectedField
+    DataSourceCreate, DataSourceRead,
+    ApiTestRequest, ApiTestResponse, FieldMappingRead
 )
 from backend.app.core.encryption import SecretVault
 from backend.app.core.ssrf import SSRFGuard

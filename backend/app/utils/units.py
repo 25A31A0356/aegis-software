@@ -9,7 +9,7 @@ Standard AEGIS Units:
 - Distance / Elevation: meters (m) / kilometers (km)
 - Seismic: Moment / Richter Magnitude (M)
 """
-from typing import Optional, Tuple
+from typing import Tuple
 
 
 class UnitConverter:

@@ -4,7 +4,7 @@ Handles DB session injection, JWT authentication, RBAC authorization, Client Con
 """
 import time
 from enum import Enum
-from typing import AsyncGenerator, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from fastapi import Depends, HTTPException, Security, Request, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -15,7 +15,6 @@ from backend.app.database.models import User
 from backend.app.core.security import decode_token
 from backend.app.core.config import settings
 from backend.app.cache.redis_client import CacheManager
-from backend.app.utils.logger import logger
 
 security_scheme = HTTPBearer(auto_error=False)
 

@@ -6,8 +6,7 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from backend.app.database.session import async_session_factory
-from backend.app.database.models import DataSource, FieldMapping, AlertRecord, User
-from backend.app.core.security import get_password_hash
+from backend.app.database.models import DataSource, FieldMapping, AlertRecord
 from backend.app.core.encryption import SecretVault
 from backend.app.core.config import settings
 from backend.app.utils.logger import logger
@@ -209,6 +208,7 @@ async def seed_database():
             stmt = select(DataSource).where(DataSource.provider_code == src_data["provider_code"])
             res = await session.execute(stmt)
             existing = res.scalars().first()
+            if not existing:
                 # Check if API key is provided via environment settings
                 api_key_val = None
                 p_code = src_data["provider_code"]
@@ -221,7 +221,7 @@ async def seed_database():
                 elif p_code == "cpcb" and getattr(settings, "CPCB_API_KEY", None):
                     api_key_val = settings.CPCB_API_KEY
 
-                encrypted_key = SecretVault.encrypt(api_key_val) if api_key_val else None
+                encrypted_key = SecretVault.encrypt_secret(api_key_val) if api_key_val else None
 
                 source = DataSource(
                     name=src_data["name"],

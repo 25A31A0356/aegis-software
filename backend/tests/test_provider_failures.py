@@ -4,12 +4,11 @@ Simulates network timeouts, 500 errors, and offline provider states.
 Verifies that Aegis Software handles failures gracefully without crashing or fabricating fake live data.
 """
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, AsyncMock
 import httpx
 from backend.app.providers.base import ProviderFetchResult
 from backend.app.providers.adapters.open_meteo import OpenMeteoProvider
 from backend.app.providers.adapters.usgs import USGSSeismologyProvider
-from backend.app.providers.adapters.nasa_firms import NASAFIRMSProvider
 from backend.app.providers.adapters.geographic import GeographicLocationProvider
 
 

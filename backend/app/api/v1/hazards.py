@@ -5,8 +5,8 @@ AEGIS UNIFIED DATA CORE - Hazards & Nearby Spatial Search API
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import math
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from backend.app.database.session import get_db

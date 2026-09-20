@@ -4,8 +4,7 @@ Clusters multi-source incoming observations (e.g. USGS + Regional Seismological 
 to recognize correlated events while strictly preserving independent source identities and authorities.
 """
 import math
-from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime
+from typing import List, Tuple, Optional
 from backend.app.schemas.unified import UnifiedObservation
 
 

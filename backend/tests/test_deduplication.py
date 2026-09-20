@@ -2,7 +2,6 @@
 AEGIS UNIFIED DATA CORE - Spatio-Temporal Deduplication Tests
 """
 from datetime import datetime, timezone, timedelta
-import pytest
 from backend.app.schemas.unified import UnifiedObservation, GeoLocation
 from backend.app.ingestion.deduplicator import EventDeduplicator
 

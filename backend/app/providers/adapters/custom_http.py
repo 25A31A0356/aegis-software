@@ -75,6 +75,12 @@ class CustomHttpProvider(BaseProvider):
             source_unit = mapping.get("source_unit", "standard")
             rule = mapping.get("transformation_rule", "direct")
 
+            if not aegis_field or not ext_path:
+                continue
+
+            aegis_field_str = str(aegis_field)
+            aegis_field_lower = aegis_field_str.lower()
+
             val = self._extract_path_value(record, ext_path)
             if val is None:
                 continue
@@ -82,29 +88,29 @@ class CustomHttpProvider(BaseProvider):
             try:
                 num_val = float(val)
                 # Apply unit conversions
-                if "temp" in aegis_field.lower():
+                if "temp" in aegis_field_lower:
                     norm_val, _ = UnitConverter.normalize_temperature(num_val, source_unit)
-                    measurements[aegis_field] = norm_val
-                elif "wind" in aegis_field.lower() or "speed" in aegis_field.lower():
+                    measurements[aegis_field_str] = norm_val
+                elif "wind" in aegis_field_lower or "speed" in aegis_field_lower:
                     norm_val, _ = UnitConverter.normalize_speed(num_val, source_unit)
-                    measurements[aegis_field] = norm_val
-                elif "pressure" in aegis_field.lower():
+                    measurements[aegis_field_str] = norm_val
+                elif "pressure" in aegis_field_lower:
                     norm_val, _ = UnitConverter.normalize_pressure(num_val, source_unit)
-                    measurements[aegis_field] = norm_val
-                elif "precip" in aegis_field.lower() or "rain" in aegis_field.lower() or "water" in aegis_field.lower():
+                    measurements[aegis_field_str] = norm_val
+                elif "precip" in aegis_field_lower or "rain" in aegis_field_lower or "water" in aegis_field_lower:
                     norm_val, _ = UnitConverter.normalize_precipitation(num_val, source_unit)
-                    measurements[aegis_field] = norm_val
-                elif aegis_field in ("latitude", "lat"):
+                    measurements[aegis_field_str] = norm_val
+                elif aegis_field_lower in ("latitude", "lat"):
                     lat = num_val
-                elif aegis_field in ("longitude", "lng", "lon"):
+                elif aegis_field_lower in ("longitude", "lng", "lon"):
                     lng = num_val
                 else:
-                    measurements[aegis_field] = num_val
+                    measurements[aegis_field_str] = num_val
             except (ValueError, TypeError):
-                if aegis_field in ("city", "city_name", "location"):
+                if aegis_field_lower in ("city", "city_name", "location"):
                     city_name = str(val)
                 else:
-                    measurements[aegis_field] = val
+                    measurements[aegis_field_str] = val
 
         obs_time = datetime.now(timezone.utc)
 

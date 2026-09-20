@@ -2,7 +2,7 @@
 AEGIS UNIFIED DATA CORE - Provider Telemetry & Platform Status API
 /api/v1/status
 """
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -11,7 +11,6 @@ from sqlalchemy import select
 from backend.app.database.session import get_db
 from backend.app.database.models import DataSource
 from backend.app.schemas.common import ApiResponse, FreshnessMetadata, ProvenanceMetadata
-from backend.app.cache.redis_client import CacheManager
 
 router = APIRouter(prefix="/status", tags=["System & Provider Status"])
 

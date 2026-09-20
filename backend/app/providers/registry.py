@@ -2,7 +2,7 @@
 AEGIS UNIFIED DATA CORE - Provider Registry
 Instantiates and manages all active data provider adapters.
 """
-from typing import Dict, Type, Optional, List, Any
+from typing import Dict, Optional, List, Any
 from backend.app.providers.base import BaseProvider
 from backend.app.providers.adapters.open_meteo import OpenMeteoProvider
 from backend.app.providers.adapters.usgs import USGSSeismologyProvider
@@ -16,7 +16,7 @@ from backend.app.providers.adapters.custom_http import CustomHttpProvider
 
 
 class ProviderRegistry:
-    _BUILTIN_PROVIDERS: Dict[str, Type[BaseProvider]] = {
+    _BUILTIN_PROVIDERS: Dict[str, Any] = {
         "open_meteo": OpenMeteoProvider,
         "usgs": USGSSeismologyProvider,
         "imd": IMDProvider,

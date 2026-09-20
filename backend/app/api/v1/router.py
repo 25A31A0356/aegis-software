@@ -28,6 +28,7 @@ from backend.app.api.v1.activity import router as activity_router
 from backend.app.api.v1.map_data import router as map_data_router
 from backend.app.api.v1.ws import router as ws_router
 from backend.app.api.v1.mobile import router as mobile_router
+from backend.app.api.v1.emergency_services import router as emergency_services_router
 
 api_router = APIRouter()
 
@@ -56,3 +57,5 @@ api_router.include_router(activity_router)
 api_router.include_router(map_data_router)
 api_router.include_router(ws_router)
 api_router.include_router(mobile_router)
+api_router.include_router(emergency_services_router)
+

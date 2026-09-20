@@ -9,16 +9,15 @@ import json
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from backend.app.database.session import get_db
-from backend.app.database.models import ActivityEvent, IncidentReport, AlertRecord
+from backend.app.database.models import ActivityEvent, IncidentReport
 from backend.app.schemas.common import ApiResponse, FreshnessMetadata, ProvenanceMetadata
 from backend.app.ingestion.deduplicator import EventDeduplicator
 from backend.app.realtime.manager import manager
 from backend.app.api.deps import rate_limit_check
-from backend.app.utils.logger import logger
 
 router = APIRouter(prefix="/activity", tags=["Unified Activity Stream"])
 

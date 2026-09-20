@@ -5,47 +5,119 @@ and provides atomic race-condition resolution for responder acceptance.
 """
 from enum import Enum
 from typing import Set, Dict, Optional, Tuple
-from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, text
+from sqlalchemy import select
 from fastapi import HTTPException, status
 from backend.app.database.models import SOSSignal, SOSStatusHistory, utc_now
 from backend.app.utils.logger import logger
 
 
 class SOSState(str, Enum):
+    # Canonical India Emergency Platform Lifecycle
+    CREATED = "CREATED"
+    SYNC_PENDING = "SYNC_PENDING"
+    RECEIVED = "RECEIVED"
+    NOTIFYING = "NOTIFYING"
+    NOTIFIED = "NOTIFIED"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    RESPONDING = "RESPONDING"
+    RESOLVED = "RESOLVED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+
+    # Active Responder Network Dispatch States
     PENDING = "PENDING"
     MATCHING = "MATCHING"
     OFFERED = "OFFERED"
     ACCEPTED = "ACCEPTED"
     RESPONDER_EN_ROUTE = "RESPONDER_EN_ROUTE"
     ON_SITE = "ON_SITE"
-    RESOLVED = "RESOLVED"
-    CANCELLED = "CANCELLED"
-    EXPIRED = "EXPIRED"
 
 
 # Valid state transitions graph
 VALID_TRANSITIONS: Dict[str, Set[str]] = {
+    # Canonical Lifecycle
+    SOSState.CREATED.value: {
+        SOSState.SYNC_PENDING.value,
+        SOSState.RECEIVED.value,
+        SOSState.NOTIFYING.value,
+        SOSState.PENDING.value,
+        SOSState.CANCELLED.value,
+        SOSState.FAILED.value
+    },
+    SOSState.SYNC_PENDING.value: {
+        SOSState.RECEIVED.value,
+        SOSState.NOTIFYING.value,
+        SOSState.PENDING.value,
+        SOSState.CANCELLED.value,
+        SOSState.FAILED.value
+    },
+    SOSState.RECEIVED.value: {
+        SOSState.NOTIFYING.value,
+        SOSState.NOTIFIED.value,
+        SOSState.MATCHING.value,
+        SOSState.PENDING.value,
+        SOSState.CANCELLED.value,
+        SOSState.RESOLVED.value
+    },
+    SOSState.NOTIFYING.value: {
+        SOSState.NOTIFIED.value,
+        SOSState.ACKNOWLEDGED.value,
+        SOSState.MATCHING.value,
+        SOSState.OFFERED.value,
+        SOSState.FAILED.value,
+        SOSState.CANCELLED.value
+    },
+    SOSState.NOTIFIED.value: {
+        SOSState.ACKNOWLEDGED.value,
+        SOSState.RESPONDING.value,
+        SOSState.OFFERED.value,
+        SOSState.ACCEPTED.value,
+        SOSState.RESOLVED.value,
+        SOSState.CANCELLED.value
+    },
+    SOSState.ACKNOWLEDGED.value: {
+        SOSState.RESPONDING.value,
+        SOSState.ACCEPTED.value,
+        SOSState.RESPONDER_EN_ROUTE.value,
+        SOSState.RESOLVED.value,
+        SOSState.CANCELLED.value
+    },
+    SOSState.RESPONDING.value: {
+        SOSState.ON_SITE.value,
+        SOSState.RESOLVED.value,
+        SOSState.CANCELLED.value,
+        SOSState.FAILED.value
+    },
+
+    # Responder Network Operations
     SOSState.PENDING.value: {
         SOSState.MATCHING.value,
+        SOSState.NOTIFYING.value,
+        SOSState.OFFERED.value,
+        SOSState.ACCEPTED.value,
         SOSState.CANCELLED.value,
         SOSState.EXPIRED.value,
-        SOSState.ACCEPTED.value  # For direct dispatch/override
+        SOSState.RESOLVED.value
     },
     SOSState.MATCHING.value: {
         SOSState.OFFERED.value,
+        SOSState.ACCEPTED.value,
         SOSState.CANCELLED.value,
-        SOSState.EXPIRED.value
+        SOSState.EXPIRED.value,
+        SOSState.RESOLVED.value
     },
     SOSState.OFFERED.value: {
         SOSState.ACCEPTED.value,
-        SOSState.MATCHING.value,  # If all candidate responders decline, re-evaluate
+        SOSState.MATCHING.value,
         SOSState.CANCELLED.value,
-        SOSState.EXPIRED.value
+        SOSState.EXPIRED.value,
+        SOSState.RESOLVED.value
     },
     SOSState.ACCEPTED.value: {
         SOSState.RESPONDER_EN_ROUTE.value,
+        SOSState.RESPONDING.value,
         SOSState.ON_SITE.value,
         SOSState.CANCELLED.value,
         SOSState.EXPIRED.value,
@@ -60,9 +132,12 @@ VALID_TRANSITIONS: Dict[str, Set[str]] = {
         SOSState.RESOLVED.value,
         SOSState.CANCELLED.value
     },
-    SOSState.RESOLVED.value: set(),   # Terminal state
-    SOSState.CANCELLED.value: set(),  # Terminal state
-    SOSState.EXPIRED.value: set()     # Terminal state
+
+    # Terminal states
+    SOSState.RESOLVED.value: set(),
+    SOSState.CANCELLED.value: set(),
+    SOSState.EXPIRED.value: set(),
+    SOSState.FAILED.value: set()
 }
 
 

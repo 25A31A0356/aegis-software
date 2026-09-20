@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.abspath("."))
 
 from backend.app.core.config import settings
 from backend.app.database.base import Base
-import backend.app.database.models  # load models
+import backend.app.database.models as _models  # noqa: F401
+_ = _models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

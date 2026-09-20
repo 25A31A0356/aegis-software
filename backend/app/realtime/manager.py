@@ -4,7 +4,7 @@ Coordinates live synchronization across Aegis Web (Portal) and Aegis App (Mobile
 """
 import asyncio
 import json
-from typing import Dict, Set, List, Any, Optional
+from typing import Dict, Set, Any, Optional
 from datetime import datetime, timezone
 from fastapi import WebSocket
 from backend.app.cache.redis_client import CacheManager

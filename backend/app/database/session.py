@@ -8,7 +8,7 @@ from sqlalchemy import select
 from backend.app.core.config import settings
 from backend.app.core.security import get_password_hash
 from backend.app.database.base import Base
-from backend.app.database.models import User, DataSource
+from backend.app.database.models import User
 from backend.app.utils.logger import logger
 
 # Build async connection URL

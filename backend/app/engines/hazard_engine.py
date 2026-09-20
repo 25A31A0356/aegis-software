@@ -2,9 +2,8 @@
 AEGIS UNIFIED DATA CORE - Hazard & Risk Assessment Engine
 Rules-based and statistical evaluation engine for multi-hazard alert triggering and risk categorisation.
 """
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timezone
-from backend.app.schemas.unified import UnifiedObservation, AlertItemSchema
+from typing import Dict, Any
+from backend.app.schemas.unified import UnifiedObservation
 
 
 class HazardEngine:

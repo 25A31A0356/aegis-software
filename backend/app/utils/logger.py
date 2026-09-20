@@ -6,7 +6,6 @@ are NEVER exposed in application logs or standard output.
 import logging
 import re
 import sys
-from typing import Any, Dict
 
 # Regex patterns for sensitive keys and tokens
 SENSITIVE_PATTERNS = [

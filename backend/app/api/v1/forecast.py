@@ -2,7 +2,7 @@
 AEGIS UNIFIED DATA CORE - Multi-Day & Hourly Meteorological Forecast API
 /api/v1/forecast
 """
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel, Field

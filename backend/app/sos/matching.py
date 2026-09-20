@@ -4,10 +4,9 @@ Performs 10 km initial and 20 km expanded geospatial responder discovery using P
 Enforces active opt-in, availability, and concurrency eligibility rules.
 """
 import math
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timezone, timedelta
+from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, not_
+from sqlalchemy import select, not_
 from backend.app.database.models import (
     SOSSignal, SOSResponderCandidate, User, UserPreference, SOSAssignment, utc_now
 )

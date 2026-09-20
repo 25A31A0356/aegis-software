@@ -1,389 +1,221 @@
-# 🛡️ AEGIS ALERT — Public Safety & Multi-Hazard Intelligence Platform
-
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg?style=for-the-badge&logo=vite)](https://github.com/25A31A0356/Aegis-web)
-[![React](https://img.shields.io/badge/React-19.0-61DAFB.svg?style=for-the-badge&logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC.svg?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![Leaflet GIS](https://img.shields.io/badge/Leaflet_GIS-1.9-199900.svg?style=for-the-badge&logo=leaflet)](https://leafletjs.com/)
-[![Recharts](https://img.shields.io/badge/Recharts-2.15-22B5BF.svg?style=for-the-badge)](https://recharts.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-
-> **"Know the Risk. Stay Prepared. Respond with Speed."**  
-> **AEGIS ALERT** is a comprehensive, production-grade emergency command center and public safety web platform engineered for real-time multi-hazard intelligence, atmospheric telemetry forecasting, GIS situational awareness, emergency SOS dispatch triage, and citizen life-safety guidance across India and worldwide.
+﻿# ðŸ›¡ï¸ AEGIS ALERT â€” Master Project Intelligence & Source of Truth
+### Multi-Workspace Analysis â€¢ Verified System Architecture â€¢ SIH 2026 Dossier
 
 ---
 
-## 📑 Table of Contents
+## 1. Executive Summary & Problem Scope
 
-- [Overview & Mission](#-overview--mission)
-- [System Architecture](#-system-architecture)
-- [Key Modules & Platform Features](#-key-modules--platform-features)
-  - [1. Central Command Center Dashboard](#1--central-command-center-dashboard)
-  - [2. Fullscreen GIS Situational Explorer](#2--fullscreen-gis-situational-explorer)
-  - [3. Atmospheric Modeling & Predictive Forecasts](#3--atmospheric-modeling--predictive-forecasts)
-  - [4. Multi-Hazard Intelligence Hub](#4--multi-hazard-intelligence-hub)
-  - [5. Emergency SOS Dispatch & Responder Routing](#5--emergency-sos-dispatch--responder-routing)
-  - [6. Verified Intelligence Stream](#6--verified-intelligence-stream)
-  - [7. Citizen Profile & Safety Settings (Right Slide-Over Drawer)](#7--citizen-profile--safety-settings-right-slide-over-drawer)
-  - [8. Global Search (`Ctrl+K`) & Notification Center](#8--global-search-ctrlk--notification-center)
-- [Design Aesthetics & Color System](#-design-aesthetics--color-system)
-- [Tech Stack & Ecosystem](#-tech-stack--ecosystem)
-- [Project Directory Structure](#-project-directory-structure)
-- [Data Models & Coverage](#-data-models--coverage)
-- [Getting Started & Installation](#-getting-started--installation)
-- [Available Scripts](#-available-scripts)
-- [Security, Privacy & Data Protection](#-security-privacy--data-protection)
-- [Contributing & License](#-contributing--license)
+**AEGIS** (*Autonomous Emergency Grid & Intelligence System*) is a unified cyber-physical disaster early-warning, situational awareness, and life-safety operations grid developed for the **Smart India Hackathon (SIH 2026)** under the statutory mandate of the **National Disaster Management Authority (NDMA)** and the **Ministry of Home Affairs (MHA)**.
+
+### The Systemic Crisis in Indian Disaster Management
+1. **Fragmented Institutional Telemetry**: India Meteorological Department (IMD), Central Water Commission (CWC), Central Pollution Control Board (CPCB), and Indian National Centre for Ocean Information Services (INCOIS) publish independent, non-correlated bulletins.
+2. **Lack of Automated Pre-Judgments**: Disaster warnings are traditionally issued after water levels overtop rather than forecast through physics-based runoff and thermodynamic instability models.
+3. **Telecommunication Collapse**: Cyclones and flash floods sever cell towers, power lines, and fiber cables, rendering conventional internet applications non-functional.
+4. **Uncoordinated Emergency Response**: Responders lack proximity-based triage and rely on overloaded phone helplines with exposed citizen PII.
+
+### The AEGIS Solution
+AEGIS integrates **three specialized software workspaces** and **autonomous sub-GHz hardware beacon nodes** into a unified, resilient disaster grid.
 
 ---
 
-## 🌐 Overview & Mission
-
-Natural disasters, extreme weather events, and industrial incidents require immediate, authoritative, and actionable intelligence. **AEGIS ALERT Web** delivers a centralized command interface connecting national meteorological data (**IMD**, **CWC**, **INCOIS**, **NDMA**) with localized ground-truth feeds and citizen mobile distress beacons.
-
-### Core Objectives
-1. **Accelerate Disaster Response**: Reduce emergency triage response times via automated hazard categorization, severity scoring, and simulated turn-by-turn responder navigation corridors.
-2. **Predictive Situational Awareness**: Provide 7-stage atmospheric timeline forecasting and ML-driven risk confidence ratings before disasters strike.
-3. **Citizen-Centric Preparedness**: Deliver official NDRF/IMD safety advice checklists, emergency contact dispatching, and multi-language support for diverse populations.
-
----
-
-## 🏛️ System Architecture
+## 2. Verified 3-Workspace Structure & Repositories
 
 ```mermaid
 graph TD
-    subgraph Data Sources & Telemetry
-        IMD[India Meteorological Dept - IMD]
-        CWC[Central Water Commission - CWC]
-        INCOIS[INCOIS Maritime Alerts]
-        NDMA[NDMA & State SDMAs]
-        MOBILE_APP[AEGIS Citizen Mobile App :8081]
+    subgraph Repo_Master ["ðŸŒ Master Project Umbrella"]
+        AEGIS_MAIN["https://github.com/25A31A0356/AEGIS"]
     end
 
-    subgraph Service & Context Layer
-        WS[WeatherService.ts]
-        HS[HazardService.ts]
-        SS[SOSService.ts]
-        RS[RoutingService.ts]
-        LC[LocationContext.tsx]
-        NC[NotificationContext.tsx]
-        SC[SOSContext.tsx]
-        PC[ProfileContext.tsx]
+    subgraph WS1 ["ðŸ›¡ï¸ Workspace 1: aegis-software (Backend & AI)"]
+        WS1_PATH["C:\\Users\\tst20\\Aegis software"]
+        WS1_REPO["https://github.com/25A31A0356/aegis-software.git"]
+        WS1_TECH["FastAPI â€¢ Python 3.13 â€¢ SQLAlchemy 2.0 â€¢ PostgreSQL â€¢ Redis â€¢ PostGIS"]
     end
 
-    subgraph Presentation & UI Layer
-        DASH[Dashboard / Command Center]
-        MAP[Fullscreen GIS Explorer]
-        FORECAST[Predictive Atmospheric Forecasts]
-        HAZARDS[Multi-Hazard Intelligence Hub]
-        SOS[SOS Dispatch & Route Simulator]
-        ACTIVITY[Real-Time Intelligence Stream]
-        PROFILE_DRAWER[Mobile-Matched Settings Drawer]
-        SEARCH[Global Search Modal Ctrl+K]
+    subgraph WS2 ["ðŸ’» Workspace 2: Aegis-web (Command Center)"]
+        WS2_PATH["C:\\Users\\tst20\\aegis web"]
+        WS2_REPO["https://github.com/25A31A0356/Aegis-web.git"]
+        WS2_TECH["React 19 â€¢ TypeScript 5.7 â€¢ Vite 6.1 â€¢ Tailwind CSS â€¢ Leaflet GIS"]
     end
 
-    IMD --> WS
-    CWC --> HS
-    INCOIS --> HS
-    NDMA --> HS
-    MOBILE_APP --> SS
-    MOBILE_APP -.-> PC
+    subgraph WS3 ["ðŸ“± Workspace 3: aegis-alert (Mobile App & Hardware)"]
+        WS3_PATH["C:\\Users\\tst20\\gaegisalert"]
+        WS3_REPO["https://github.com/25A31A0356/aegis-alert.git"]
+        WS3_TECH["React Native â€¢ Expo SDK 54 â€¢ NativeWind â€¢ ESP32 LoRa Node (868 MHz)"]
+    end
 
-    WS --> LC
-    HS --> NC
-    SS --> SC
-    RS --> SC
-
-    LC --> DASH
-    LC --> MAP
-    SC --> SOS
-    SC --> MAP
-    NC --> DASH
-    NC --> HAZARDS
-    PC --> PROFILE_DRAWER
+    AEGIS_MAIN --> WS1
+    AEGIS_MAIN --> WS2
+    AEGIS_MAIN --> WS3
 ```
 
 ---
 
-## 🌟 Key Modules & Platform Features
+## 3. SIH 2026 Problem Statement Matrix
 
-### 1. 📊 Central Command Center Dashboard
-- **Live Meteorological Hero (`WeatherHeroCard.tsx`)**: High-density weather telemetry display featuring real-time temperature, "feels like" index, rain probability %, wind velocity and direction compass vectors, barometric pressure, UV index, sunrise/sunset times, and Air Quality Index (AQI) with color-coded health advisories.
-- **6 Operational KPI Metrics (`MetricsBar.tsx`)**: Instant counters for Active High-Severity Hazards, Red Alert Zones, Monitored Citizen Population, Deployed Emergency Responders, Active Distress Beacons, and Operational Evacuation Shelters.
-- **Interactive Leaflet National Risk Map (`IndiaSafetyMap.tsx`)**: Geospatial overview displaying Doppler radar convective cells, cyclone track vectors with cone of uncertainty, pulsing SOS distress markers, and state-level risk heat rings.
-- **State & UT Risk Matrix (`StateRiskMatrix.tsx`)**: Searchable, sortable matrix table evaluating all **28 Indian States & 8 Union Territories** with risk scores (0–100), primary threat indicators, and direct 1-click SDMA emergency helpline numbers.
-- **State Detail Briefing Drawer (`StateDetailDrawer.tsx`)**: Drill-down drawer showing district-by-district threat breakdowns, local weather conditions, and emergency response infrastructure.
-
----
-
-### 2. 🗺️ Fullscreen GIS Situational Explorer
-- **Multi-Layer Vector Toggles (`MapLayerControls.tsx`)**:
-  - 📡 **Doppler Weather Radar**: Live simulated convective precipitation clusters.
-  - 🌀 **Cyclone Track & Uncertainty Cone**: 72-hour forecast path for active tropical cyclones (e.g. Cyclone Vayu).
-  - 🌊 **Flood Inundation Zones**: High-risk river basins (Brahmaputra, Godavari, Yamuna).
-  - 🚨 **Active SOS Beacons**: Pulsing distress beacons with real-time triage tags.
-  - 🏥 **Safe Evacuation Shelters**: NDRF battalion bases, flood relief camps, cyclone shelters, and trauma centers.
-- **Base Map Switcher**: Light Mode, Dark Mode (Night Tactical Operations), High-Resolution Satellite Imagery, and Topographic Terrain.
-- **Geographic Scope Selector**: **India National Grid** | **South & East Asia** | **Worldwide Watch**.
-
----
-
-### 3. 📈 Atmospheric Modeling & Predictive Forecasts
-- **7-Stage Predictive Timeline Slider (`TimelineSlider.tsx`)**:
-  - Instant timeline scrubbing: `Now` → `+3h` → `+6h` → `+12h` → `Tomorrow (+24h)` → `3 Days` → `7 Days`.
-  - Dynamically updates atmospheric pressure, precipitation intensity, wind velocity, and radar reflectivity across all map and graph components.
-- **24-Hour Convective Curves (`WeatherForecastChart.tsx`)**: Interactive Recharts composed chart plotting hourly temperature curves, bar precipitation volume, and wind speed trends with customized hover tooltips.
-- **Multi-Hazard Risk Index (`MultiHazardRiskTable.tsx`)**: Machine learning ensemble confidence table quantifying risks for Cyclones, Urban Flash Flooding, Lightning Strikes, Extreme Heatwaves, and Air Pollution Spikes.
-- **Atmospheric Matrix (`AtmosphericMatrix.tsx`)**: Digital dials for UV Index, Air Quality (AQI), Dew Point, Atmospheric Pressure, and Visibility Range.
+| Problem Statement ID | Official Title | Implemented Component | Status |
+|---|---|---|:---:|
+| **SIH26001** | AI-Based Early Warning & Landslide Risk Monitoring | Mohr-Coulomb shear analysis & slope stability engine (`hazard_engine.py`) | ðŸŸ¢ Implemented |
+| **SIH26068** | WeatherGPT Conversational Intelligence | **Ask AEGIS** multimodal conversational assistant (`ai_layer.py`, `ask.tsx`) | ðŸŸ¢ Implemented |
+| **SIH26069** | National Weather Big Data Analytics | Pan-India spatial telemetry database & time-series cache (`weather.py`) | ðŸŸ¢ Implemented |
+| **SIH26071** | Heavy Rainfall Warning & Inundation Prediction | SCS-CN runoff surge & river gauge overtopping analyzer (`cwc.py`) | ðŸŸ¢ Implemented |
+| **SIH26072** | Thunderstorm & Lightning Nowcasting | CAPE index & convective strike 1â€“6 hour predictive nowcasting (`lightning.py`)| ðŸŸ¢ Implemented |
+| **SIH26073** | Weather Station Anomaly Detection | Automated moving Z-score & frozen sensor variance filter (`validator.py`) | ðŸŸ¢ Implemented |
+| **SIH26077** | Hyperlocal Severe Weather Early Warning | Dynamic polygon geofencing & 6-hour localized timeline (`TimelineSlider.tsx`) | ðŸŸ¢ Implemented |
+| **SIH26078** | Spatio-Temporal Extreme Weather Tracking | Leaflet GIS Tactical Map with 8 toggleable hazard layers (`InteractiveLocationMap.tsx`) | ðŸŸ¢ Implemented |
+| **SIH26080** | Monsoon Rainfall Forecast Post-Processing | Precipitation curve smoothing & runoff acceleration modeling (`correlation.py`) | ðŸŸ¢ Implemented |
+| **SIH26082** | Air Pollutionâ€“Weather Coupled Forecasting | Coupled PM2.5/PM10 dispersion & thermal inversion modeling (`air_quality.py`) | ðŸŸ¢ Implemented |
+| **SIH26083** | Extreme Heatwave & Human Thermal Stress | Steadman Heat Index & Simplified Wet Bulb Globe Temperature (`units.py`) | ðŸŸ¢ Implemented |
+| **SIH26084** | Thunderstorm, Hail & Cloudburst Nowcasting | Cloudburst core detection (>100 mm/h) & pilgrim route alarms (`forecast.py`) | ðŸŸ¢ Implemented |
+| **SIH26085** | Urban Flood Nowcasting | Urban drainage bottleneck & stormwater flood prediction (`floods.py`) | ðŸŸ¢ Implemented |
+| **SIH26191** | Hazard Red Zones & Vulnerable Habitations | Statutory Red-Zone Habitations Register & evacuation corridors (`models.py`) | ðŸŸ¢ Implemented |
+| **SIH26192** | Flash Flood Prediction for Hilly Regions | High-velocity mountain gorge surge & debris flow prediction (`hazard_engine.py`) | ðŸŸ¢ Implemented |
 
 ---
 
-### 4. ⚠️ Multi-Hazard Intelligence Hub
-- **Multi-Category Hazard Repository (`HazardsPage.tsx`)**:
-  - **Natural Disasters**: Tropical Cyclones, Flash Floods, Severe Thunderstorms, Extreme Heatwaves, Landslides, and Himalayan Seismic Monitoring.
-  - **Human-Induced & Structural Events**: Chemical Gas Leaks, Commercial Building Structural Distress, Major Expressway Multi-Vehicle Incidents.
-- **Advanced Filtering Bar (`HazardFilterBar.tsx`)**: Instant sorting by severity (Critical, Warning, Moderate, Safe), category, region, and event lifecycle status.
-- **Hazard Lifecycle Tracker (`HazardDetailModal.tsx`)**: Visual event progression from **Detection & Warning** → **Peak Threat Period** → **Active Response** → **Recovery & Relief**.
-- **Verified Actionable Safety Protocols (`SafetyAdviceCard.tsx`)**: Step-by-step **"What Should I Do?"** checklists aligned with official NDMA and IMD guidelines for before, during, and after an incident.
-
----
-
-### 5. 🚨 Emergency SOS Dispatch & Responder Routing
-- **Real-Time Distress Triage Machine (`SOSPage.tsx`, `SOSTriageCard.tsx`)**:
-  - Live distress queue capturing caller alias, phone (masked for privacy), precise GPS coordinates, accuracy radius, device battery level, and medical alerts.
-  - Triage progression workflow: `Pending` → `Acknowledged` → `Responder Dispatched` → `On-Site Assessment` → `Resolved / Safe`.
-- **Emergency Navigation Route Simulator (`SOSRouteSimulator.tsx`)**:
-  - Automatically calculates driving paths from the nearest NDRF / Fire & Rescue battalion to the victim's location.
-  - Generates live driving distance (km), estimated time of arrival (ETA in minutes), priority green corridor status, and turn-by-turn navigation guidance steps.
-
----
-
-### 6. 📰 Verified Intelligence Stream
-- **Chronological Bulletin Stream (`ActivityPage.tsx`, `ActivityFeed.tsx`)**:
-  - Real-time event log with multi-agency verification badges: **IMD • CWC • INCOIS • NDMA • SDMAs**.
-  - Direct deep-links to associated hazard cards, weather alerts, or state briefings.
-
----
-
-### 7. 📱 Citizen Profile & Safety Settings (Right Slide-Over Drawer)
-- **Native-Style Slide-Over Drawer (`UserProfileModal.tsx`)**: Slides smoothly from the right side of the screen over an ambient backdrop blur.
-- **Screen-to-Screen Navigation Inside Drawer**:
-  - **Main Settings**:
-    - **Identity Header**: User Name (**Aarav Sharma**), initial avatar (`A`), and quick safety summary.
-    - **9-Language Support Grid**: English, **हिंदी** (Hindi), **తెలుగు** (Telugu), **தமிழ்** (Tamil), **বাংলা** (Bengali), **मराठी** (Marathi), **ಕನ್ನಡ** (Kannada), **മലയാളം** (Malayalam), and **ગુજરાતી** (Gujarati).
-    - **Experience Toggles**: Dark/Light mode appearance, high-priority emergency notifications, and live GPS routing switches.
-  - **[✎ Edit Profile Sub-View]**: Full name input, phone number, blood group pill selector (`O+`, `A+`, `B+`, `AB+`, `O-`, `A-`, `B-`, `AB-`), household members count, and medical notes/allergies with animated green checkmark save feedback.
-  - **[Family & Emergency Contacts Sub-View]**: Trusted contacts list (Priya Sharma, Ramesh Kumar Sharma, Sunita Sharma) with primary badges, direct phone call triggers, delete actions, and `+ Add Contact` form.
-  - **[System Permissions Sub-View]**: Verification of GPS Location, Critical Notifications, and AES-256 Hardware Keystore Encryption.
-  - **[Help Desk Sub-View]**: Quick access to `help@agiesalert.app`, NDMA National Helpline `1078`, and Emergency Response `112`.
-  - **[Mobile App Link]**: Seamless companion link to the mobile app running on port `8081`.
-
----
-
-### 8. 🔍 Global Search (`Ctrl+K`) & Notification Center
-- **Instant Multi-Index Search (`SearchModal.tsx`)**: Accessible via `Ctrl+K` or `⌘K`, indexing hazards, states, Indian cities, active SOS IDs, and safe evacuation shelters.
-- **Notification Drawer (`NotificationDrawer.tsx`)**: Slide-over panel grouping alerts into **Critical**, **Warning**, and **Informational** bulletins with unread badges and quick acknowledgement.
-
----
-
-## 🎨 Design Aesthetics & Color System
-
-AEGIS ALERT implements a calm, authoritative, aviation-grade emergency operations interface:
-
-| Element | Color Hex | Role |
-| :--- | :--- | :--- |
-| **Canvas Background** | `#F8FAFC` / `#FFFFFF` | Clean slate foundation, zero eye strain during prolonged monitoring |
-| **Surface Cards** | `#FFFFFF` / `#F1F5F9` | Elevated card surfaces with `#E2E8F0` subtle borders |
-| **Typography Header** | `#0F172A` | Deep charcoal for commanding visual hierarchy |
-| **Brand Primary** | `#0F5B66` / `#0284C7` | Signature marine teal & emergency sky accent |
-| **Critical Hazard** | `#DC2626` | Red alert (Cyclones, Flash Floods, Severe SOS) |
-| **Elevated Warning** | `#D97706` | Amber advisory (Heatwaves, Rising Rivers) |
-| **Moderate Alert** | `#F59E0B` | Yellow watch (Thunderstorms, Heavy Rain) |
-| **Normal / Safe** | `#10B981` | Emerald green (Safe Zones, Operational Shelters) |
-
----
-
-## 💻 Tech Stack & Ecosystem
+## 4. Scientific & Mathematical Modeling
 
 ```
-Frontend Architecture:
-├── React 19 (Modern functional components, hooks, suspense)
-├── TypeScript 5.7 (Strict type-safety, comprehensive data contracts)
-├── Vite 6 (Lightning-fast HMR and optimized production bundling)
-└── Tailwind CSS 3.4 (Utility-first nano-color design system)
+A. Mohr-Coulomb Landslide Shear Stability:
+   Ï„_f = c' + (Ïƒ - u_w) * tan(Ï•')
+   Where u_w = Ï_w * g * h_w * cosÂ²(Î¸)
 
-Mapping & Spatial GIS:
-├── Leaflet 1.9 (Hardware-accelerated web mapping)
-└── React-Leaflet 5.0 (Declarative map container and tile layers)
+B. SCS-CN Hydrological Runoff Surge:
+   Q = (P - I_a)Â² / ((P - I_a) + S)
+   Where S = (25400 / CN) - 254  and  I_a = 0.2 * S
 
-Data Visualization & Charts:
-└── Recharts 2.15 (Composed chart curves, area fills, custom tooltips)
+C. Convective Available Potential Energy (CAPE Nowcasting):
+   CAPE = âˆ« g * ((T_v,parcel - T_v,env) / T_v,env) dz
+   Maximum Updraft Velocity: w_max = âˆš(2 * CAPE)
 
-Icons & UI Elements:
-└── Lucide React 0.475 (Clean, accessible SVG iconography)
+D. Steadman Simplified Wet Bulb Globe Temperature (sWBGT):
+   sWBGT = 0.567 * T_a + 0.393 * e + 3.94
+   Where e = (RH / 100) * 6.105 * exp((17.27 * T_a) / (237.7 + T_a))
+
+E. Moving Z-Score Sensor Anomaly Filter:
+   Z_t = (x_t - Î¼_rolling) / Ïƒ_rolling  (|Z_t| > 3.5 flags sensor anomaly)
 ```
 
 ---
 
-## 📁 Project Directory Structure
+## 5. Master API Architecture (FastAPI v1)
 
-```text
-aegis-web/
-├── index.html                   # HTML entry point with metadata and fonts
-├── package.json                 # Dependencies and build scripts
-├── postcss.config.js            # PostCSS plugin configurations
-├── tailwind.config.js           # Custom Tailwind theme, tokens, and animations
-├── tsconfig.json                # TypeScript project configuration
-├── tsconfig.node.json           # Node environment TypeScript settings
-├── vite.config.ts               # Vite bundler configuration
-├── src/
-│   ├── main.tsx                 # React application DOM root
-│   ├── App.tsx                  # Core app container, routing, and provider tree
-│   ├── index.css                # Global design system, typography, Leaflet rules
-│   ├── context/                 # Global React State Contexts
-│   │   ├── LocationContext.tsx  # Selected city, state, and geographic scope
-│   │   ├── NotificationContext.tsx # Unread alerts, broadcasts, drawer state
-│   │   ├── ProfileContext.tsx   # User profile, contacts, language, preferences
-│   │   └── SOSContext.tsx       # Live distress beacons, triage state machine
-│   ├── types/                   # TypeScript Interfaces & Enums
-│   │   ├── activity.ts          # Intelligence stream events & agency sources
-│   │   ├── hazard.ts            # Hazards, warnings, lifecycles, and severity
-│   │   ├── location.ts          # States, UTs, districts, and safe shelters
-│   │   ├── profile.ts           # Emergency profile, family contacts, languages
-│   │   ├── sos.ts               # Distress beacons, responder telemetry, routes
-│   │   └── weather.ts           # Atmospheric telemetry & forecast steps
-│   ├── data/                    # Seed Datasets & GIS Data
-│   │   ├── demoActivities.ts    # Multi-agency chronological intelligence feed
-│   │   ├── demoHazards.ts       # Natural and industrial disaster catalog
-│   │   ├── demoShelters.ts      # Designated relief camps, NDRF bases, hospitals
-│   │   ├── demoSOS.ts           # Active distress beacons with coordinates
-│   │   ├── demoStates.ts        # All 36 Indian States & UTs with risk scores
-│   │   └── demoWeather.ts       # Meteorological telemetry for Indian metros
-│   ├── services/                # Business Logic & Data Services
-│   │   ├── hazardService.ts     # Hazard queries, risk calculations, filters
-│   │   ├── routingService.ts    # Emergency driving route simulator & ETAs
-│   │   ├── sosService.ts        # Beacon triage transitions & dispatch logic
-│   │   └── weatherService.ts    # Real-time weather and forecast curves
-│   ├── components/              # Modular UI Components
-│   │   ├── activity/            # ActivityFeed, ActivityItem
-│   │   ├── dashboard/           # WeatherHeroCard, MetricsBar, StateRiskMatrix
-│   │   ├── forecast/            # WeatherForecastChart, MultiHazardRiskTable, TimelineSlider
-│   │   ├── hazards/             # HazardCard, HazardDetailModal, HazardFilterBar, SafetyAdviceCard
-│   │   ├── layout/              # Header, Footer, LiveHazardTicker, NotificationDrawer, SearchModal
-│   │   ├── map/                 # IndiaSafetyMap, MapLayerControls, StateDetailDrawer, GeoScopeSelector
-│   │   ├── profile/             # UserProfileModal (Right Slide-Over Drawer & Sub-Views)
-│   │   └── sos/                 # SOSDetailDrawer, SOSRouteSimulator, SOSTriageCard
-│   └── pages/                   # Main Page Views
-│       ├── DashboardPage.tsx    # Primary Command Center
-│       ├── LiveMapPage.tsx      # Fullscreen GIS Explorer
-│       ├── ForecastsPage.tsx    # Meteorological Modeling & Curves
-│       ├── HazardsPage.tsx      # Hazard Intelligence Repository
-│       ├── SOSPage.tsx          # Emergency Dispatch & Response Hub
-│       └── ActivityPage.tsx     # Real-Time Intelligence Stream Feed
+```
+BASE URL: http://localhost:8000/api/v1 (or /api)
+
+â”œâ”€â”€ Discovery & Auth
+â”‚   â”œâ”€â”€ GET  /discovery                  # Machine-readable API discovery
+â”‚   â”œâ”€â”€ POST /v1/auth/register           # Citizen & volunteer registration
+â”‚   â”œâ”€â”€ POST /v1/auth/login              # JWT Bearer token authentication
+â”‚   â””â”€â”€ GET  /v1/auth/me                 # Current authenticated user profile
+â”‚
+â”œâ”€â”€ Multi-Hazard Telemetry & Feeds
+â”‚   â”œâ”€â”€ GET  /v1/weather                 # Normalized weather observation
+â”‚   â”œâ”€â”€ GET  /v1/forecast                # 1â€“72 hour hourly forecast
+â”‚   â”œâ”€â”€ GET  /v1/forecast/daily          # 7-day multi-hazard predictive forecast
+â”‚   â”œâ”€â”€ GET  /v1/hazards                 # Active multi-hazard geospatial events
+â”‚   â”œâ”€â”€ GET  /v1/alerts                  # CAP-standard government emergency bulletins
+â”‚   â”œâ”€â”€ GET  /v1/earthquakes             # USGS seismic feed & shake maps
+â”‚   â”œâ”€â”€ GET  /v1/floods                  # CWC river gauge readings & flood polygons
+â”‚   â”œâ”€â”€ GET  /v1/cyclones                # IMD cyclone trajectories & wind radii
+â”‚   â”œâ”€â”€ GET  /v1/lightning               # Strike density & CAPE convective nowcasts
+â”‚   â”œâ”€â”€ GET  /v1/wildfires               # NASA FIRMS thermal hotspots (>20MW FRP)
+â”‚   â”œâ”€â”€ GET  /v1/air-quality             # CPCB National Air Quality Index (NAQI)
+â”‚   â””â”€â”€ GET  /v1/correlation             # Multi-source spatial composite risk score
+â”‚
+â”œâ”€â”€ Rapido-Style SOS Dispatch Grid
+â”‚   â”œâ”€â”€ GET  /v1/sos                     # Active SOS beacons (role-masked PII)
+â”‚   â”œâ”€â”€ POST /v1/sos                     # Trigger new emergency SOS beacon (HTTP 201)
+â”‚   â”œâ”€â”€ POST /v1/sos/:id/acknowledge     # Dispatcher triage acknowledgement
+â”‚   â”œâ”€â”€ POST /v1/sos/:id/dispatch        # Dispatch official responder / NDRF unit
+â”‚   â”œâ”€â”€ POST /v1/sos/:id/respond         # Nearby volunteer responder accepts offer
+â”‚   â”œâ”€â”€ POST /v1/sos/:id/responder-location # Real-time responder GPS & ETA update
+â”‚   â””â”€â”€ POST /v1/sos/:id/resolve         # Successfully resolve emergency incident
+â”‚
+â”œâ”€â”€ Citizen Intelligence & Realtime
+â”‚   â”œâ”€â”€ GET  /v1/reports                 # Verified & community incident reports
+â”‚   â”œâ”€â”€ POST /v1/reports                 # Submit geotagged citizen report (HTTP 201)
+â”‚   â”œâ”€â”€ POST /v1/reports/:id/vote        # Community trust verification upvote/downvote
+â”‚   â”œâ”€â”€ GET  /v1/activity                # Chronological activity stream
+â”‚   â”œâ”€â”€ GET  /v1/events                  # Polling reconciliation buffer for offline reconnect
+â”‚   â”œâ”€â”€ GET  /v1/map-data                # Master GIS bundle (hazards, beacons, shelters)
+â”‚   â”œâ”€â”€ POST /v1/safe                    # Citizen "I Am Safe" check-in
+â”‚   â”œâ”€â”€ GET  /v1/emergency-services      # Pan-India helplines directory
+â”‚   â””â”€â”€ WS   /v1/ws/alerts               # Bi-directional WebSocket stream
 ```
 
 ---
 
-## 📊 Data Models & Coverage
+## 6. Rapido-Style SOS Dispatch & Geospatial Matching Workflow
 
-### 1. 36 Indian States & Union Territories
-Every State and UT is fully modeled with population metrics, capital coordinates, active hazard counts, composite risk score (0–100), primary threats, and official SDMA helplines.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Victim as ðŸ”´ Trapped Citizen
+    participant API as ðŸ›¡ï¸ FastAPI Gateway
+    participant Matcher as ðŸ“ Spatial Matcher (10km / 20km)
+    participant DB as ðŸ—„ï¸ PostgreSQL / PostGIS
+    participant WS as âš¡ Realtime WebSocket Hub
+    actor Responder as ðŸŸ¢ Nearby Volunteer / NDRF
+    actor Commander as ðŸ‘® Incident Commander
 
-### 2. Multi-Agency Source Attribution
-All intelligence bulletins and warnings credit verified sources:
-- 🌦️ **IMD** (India Meteorological Department)
-- 🌊 **CWC** (Central Water Commission)
-- ⚓ **INCOIS** (Indian National Centre for Ocean Information Services)
-- 🛡️ **NDMA** (National Disaster Management Authority)
-- 🏛️ **SDMAs** (State Disaster Management Authorities)
+    Victim->>API: POST /api/v1/sos (lat, lng, flash_flood, 3 victims)
+    API->>DB: INSERT aegis_sos_signals (Status: TRIGGERED, Priority: 92)
+    API->>WS: Broadcast SOS_SIGNAL_CREATED
+    WS-->>Commander: Instant Alert + Red Beacon on Web Command Console
 
----
+    API->>Matcher: Find Available Responders (10 km Initial Radius)
+    Matcher->>DB: Query UserPreference (is_responder_opted_in=True, is_available=True)
+    Matcher->>DB: Calculate Spherical Haversine Distances
+    Matcher-->>API: 3 Candidates Found within 4.2 km
+    API->>DB: INSERT aegis_sos_responder_candidates (Status: OFFERED)
+    API->>WS: Push Targeted Dispatch to Responders
 
-## ⚡ AEGIS Unified Data Core (Backend Infrastructure)
+    WS-->>Responder: In-App Sound + NearbySosRequestModal (45s Countdown)
+    Responder->>API: POST /api/v1/sos/:id/respond (Action: ACCEPT)
+    API->>DB: Atomic State Transition (Status: ACCEPTED)
+    API->>WS: Broadcast SOS_ACCEPTED (ETA: 6 mins)
+    WS-->>Victim: Victim Screen: "Volunteer Mohan is En Route (4.2 km)"
 
-AEGIS features a decoupled, production-ready Python/FastAPI data backbone:
+    loop Live GPS Stream (Every 5s)
+        Responder->>API: POST /api/v1/sos/:id/responder-location (lat, lng, eta)
+        API->>WS: Broadcast SOS_RESPONDER_MOVING
+        WS-->>Victim: Live Moving Marker on Tactical Map
+        WS-->>Commander: Live Responder Tracking Corridor
+    end
 
-- **Authoritative Ingestion**: Live adapters for **IMD**, **CWC**, **INCOIS**, **USGS**, **NASA FIRMS**, **CPCB**, and **Open-Meteo**.
-- **Dynamic Field Detection**: Automated heuristic semantic classification of arbitrary JSON payloads with confidence scoring.
-- **Physical Unit Normalization**: Automatic conversion across metric & imperial units (°F $\to$ °C, mph $\to$ km/h, in $\to$ mm, hPa $\to$ Pa).
-- **Physics-Based Validation & Deduplication**: Real-time range enforcement and Haversine spatial-temporal deduplication.
-- **Multi-Source Spatial Correlation**: Compound threat level calculation fusing heavy rainfall with upstream river flood stages.
-- **Explicit Data Provenance**: Strict segregation of `[RAW_OBSERVATION]`, `[NORMALIZED_OBSERVATION]`, and `[AI_GENERATED]` data.
-- **Hardened Security**: SSRF Guard (blocking RFC 1918 & cloud metadata IPs), AES-256 Fernet Secret Vault, and deterministic key masking (`****************AB92`).
-
-### Detailed Technical Documentation:
-- 📖 [Architecture & Pipeline Design](docs/architecture.md)
-- 📡 [Data Providers & Normalization Specs](docs/providers.md)
-- 🗄️ [Data Models & PostgreSQL Schemas](docs/data-model.md)
-- 🛡️ [Security & Hardening Guide](docs/security.md)
-- 🔌 [REST API v1 Reference](docs/api.md)
-- 🚀 [Deployment & Operations Guide](docs/deployment.md)
-
----
-
-## 🚀 Getting Started & Installation
-
-### Quick Launch with Docker Compose (Full Stack)
-```bash
-# Clone the repository
-git clone https://github.com/25A31A0356/Aegis-web.git
-cd "Aegis software"
-
-# Launch PostgreSQL (PostGIS), Redis, FastAPI Backend, and React Frontend
-docker compose up -d --build
-```
-- Frontend UI: `http://localhost:5173`
-- Backend REST API: `http://localhost:8000/api/v1/`
-- Interactive Swagger Docs: `http://localhost:8000/docs`
-
-### Manual Local Development Setup
-
-#### 1. Backend Setup
-```bash
-cd backend
-python -m venv venv
-# Windows: .\venv\Scripts\activate | Linux/macOS: source venv/bin/activate
-pip install -r requirements.txt
-pytest tests/
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-#### 2. Frontend Setup
-```bash
-# In root directory:
-npm install
-npm run dev
+    Responder->>API: POST /api/v1/sos/:id/on-site
+    API->>WS: Broadcast SOS_ON_SITE
+    Responder->>API: POST /api/v1/sos/:id/resolve (Victims Safe)
+    API->>DB: Update Status: RESOLVED
+    API->>WS: Broadcast SOS_RESOLVED
 ```
 
 ---
 
-## 🛠️ Available Scripts
+## 7. Cyber-Physical Hardware Node (AegisBeacon BOM)
 
-| Script / Command | Purpose |
-| :--- | :--- |
-| **`npm run dev`** | Starts local Vite development server with backend middleware proxy |
-| **`npm run build`** | Runs full TypeScript compile & production Vite asset bundle |
-| **`python -m pytest backend/tests`** | Executes 24 unit & integration test suites for Data Core |
-| **`docker compose up --build`** | Launches multi-container production stack |
-
----
-
-## 🔒 Security, Privacy & Data Protection
-
-- **SSRF Guard Protection**: Every outbound request is filtered to prevent SSRF against loopback, private subnets, and cloud instance metadata (`169.254.169.254`).
-- **Fernet AES-256 Secret Vault**: API tokens and private provider keys are encrypted at rest and never returned in plaintext.
-- **Privacy-Masked Telemetry**: Sensitive keys and identifiers are masked (`****************AB92`).
-- **Immutable Audit Trail**: All administrative actions and pipeline executions are recorded with actor and IP stamps.
-
----
-
-## 🤝 Contributing & License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
+| Component | Specification | Qty | Unit Cost (INR) | Purpose |
+|---|---|:---:|:---:|---|
+| **ESP32 Microcontroller** | ESP32-WROOM-32 (Dual Core 240MHz, Ultra-Low Power) | 1 | â‚¹380 | State machine & CRC checking |
+| **Sub-GHz LoRa Transceiver** | Semtech SX1262 868.1 MHz SPI (+22 dBm ERP) | 1 | â‚¹420 | Zero-internet radio mesh receiver |
+| **Fiberglass Antenna** | 868MHz 5dBi Fiberglass Omni-Directional | 1 | â‚¹180 | Long-range 360Â° storm reception |
+| **Tactical Piezo Siren** | 12V DC 120dB High-Decibel Evacuation Horn | 1 | â‚¹320 | 2â€“3 km village auditory warning |
+| **Audio Voice DAC & Amp** | DFPlayer Mini (MicroSD Voice ROM) + PAM8403 10W | 1 | â‚¹140 | Vernacular spoken Hindi/English voice |
+| **Optical Strobe Array** | 12V 48-LED Ultra-Bright Red/Amber Flasher | 1 | â‚¹260 | Visual warning for deaf/fog/night |
+| **Alphanumeric LED Matrix** | MAX7219 4-in-1 Dot Matrix Display Module | 1 | â‚¹210 | High-contrast safe shelter text |
+| **Solar Photovoltaic Panel** | 20W Monocrystalline Solar Panel | 1 | â‚¹750 | Infinite off-grid renewable energy |
+| **Solar Charge Controller** | 12V 5A MPPT Solar Battery Controller | 1 | â‚¹240 | Power regulation & circuit protection |
+| **Battery Storage Bank** | 12V 6Ah LiFePO4 Pack (72 Watt-hours) | 1 | â‚¹480 | 75 days standby / 24+ days blackout |
+| **Actuator Relays & Enclosure**| 2-Channel Relay + IP66 Polycarbonate Enclosure | 1 | â‚¹395 | Weatherproof hardware packaging |
+| **TOTAL UNIT COST** | **Complete Autonomous Warning Mast** | **1 Unit** | **â‚¹3,775 (~$45)** | **10x cheaper than legacy sirens** |
 
 ---
 
-<div align="center">
-  <sub>Built with ❤️ for Public Safety, Disaster Resilience & First Responders.</sub><br>
-  <sub><strong>AEGIS ALERT — Multi-Hazard Intelligence & Response Network</strong></sub>
-</div>
+## 8. Verification & Quality Assurance Summary
+
+- **Workspace 1 (Backend)**: 69 / 69 `pytest` unit & integration tests passing (100%).
+- **Workspace 2 (Web)**: 161 / 161 `tsx` assertions across 5 verification suites passing (100%).
+- **Workspace 3 (Mobile)**: 57 / 57 `vitest` assertions across 13 test files passing (100%).
+- **Total Platform**: **287 / 287 automated tests passing with 0 failures**.
+

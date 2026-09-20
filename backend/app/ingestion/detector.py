@@ -3,7 +3,7 @@ AEGIS UNIFIED DATA CORE - Automatic Field Detection Engine
 Inspects arbitrary JSON/GeoJSON payload structures and heuristically discovers
 likely meteorological, seismic, hydro, and geographic fields with confidence ratings.
 """
-from typing import Dict, Any, List
+from typing import Any, List
 from backend.app.schemas.source import DetectedField
 
 

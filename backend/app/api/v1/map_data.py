@@ -6,15 +6,14 @@ Powers Interactive Maps for Aegis Web (MapLibre / Leaflet) and Aegis App (React 
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from backend.app.database.session import get_db
-from backend.app.database.models import NormalizedObservation, IncidentReport, SOSSignal, SafeZone, AlertRecord
+from backend.app.database.models import NormalizedObservation, IncidentReport, SOSSignal, SafeZone, SafeEvent
 from backend.app.schemas.common import ApiResponse, FreshnessMetadata, ProvenanceMetadata
 from backend.app.ingestion.deduplicator import EventDeduplicator
 from backend.app.api.deps import rate_limit_check
-from backend.app.utils.logger import logger
 
 router = APIRouter(prefix="/map-data", tags=["Geospatial Map Layers"])
 
@@ -84,8 +83,10 @@ async def get_unified_map_data(
         "reports": 0,
         "sos_beacons": 0,
         "shelters": 0,
-        "road_hazards": 0
+        "road_hazards": 0,
+        "safe_events": 0
     }
+
 
     # 1. LAYER: Official Active Hazards
     if include_all or "hazards" in req_layers:
@@ -106,7 +107,7 @@ async def get_unified_map_data(
                         "source": "OFFICIAL",
                         "verification_status": "OFFICIAL",
                         "location_name": h.location_name or "",
-                        "city": h.city_name or "",
+                        "city": h.district_name or h.location_name or "",
                         "state": h.state_name or "",
                         "observed_at": h.observed_at.isoformat() if h.observed_at else "",
                         "icon": f"hazard_{h.hazard_type.lower()}"
@@ -241,6 +242,34 @@ async def get_unified_map_data(
                     ))
                     layer_counts["shelters"] += 1
 
+    # 5. LAYER: Citizen Safe Declarations ("I AM SAFE")
+    if include_all or "safe_events" in req_layers:
+        safe_ev_query = select(SafeEvent).order_by(desc(SafeEvent.created_at)).limit(50)
+        safe_ev_res = await db.execute(safe_ev_query)
+        for se in safe_ev_res.scalars().all():
+            if in_bounds(se.latitude, se.longitude):
+                features.append(GeoJSONFeature(
+                    id=f"safe_{se.id}",
+                    geometry=GeoJSONGeometry(type="Point", coordinates=[se.longitude, se.latitude]),
+                    properties={
+                        "layer": "safe_events",
+                        "entity_id": se.id,
+                        "title": f"Citizen Safe: {se.user_name}",
+                        "description": se.message or "I am safe and out of danger.",
+                        "category": "SAFE_DECLARATION",
+                        "severity": "LOW",
+                        "status": se.status,
+                        "source": "CITIZEN",
+                        "verification_status": "VERIFIED",
+                        "location_name": se.location_name or "",
+                        "district": se.district or "",
+                        "state": se.state or "",
+                        "created_at": se.created_at.isoformat() if se.created_at else "",
+                        "icon": "citizen_safe"
+                    }
+                ))
+                layer_counts["safe_events"] += 1
+
     return ApiResponse(
         success=True,
         data=GeoJSONFeatureCollection(
@@ -249,6 +278,7 @@ async def get_unified_map_data(
             layer_summary=layer_counts,
             generated_at=datetime.now(timezone.utc).isoformat()
         ),
+
         freshness=FreshnessMetadata(status="fresh", age_seconds=5),
         provenance=ProvenanceMetadata(
             data_type="geospatial_feature_collection",

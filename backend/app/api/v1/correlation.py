@@ -2,7 +2,6 @@
 AEGIS UNIFIED DATA CORE - Multi-Hazard Correlation & Risk Evaluation API
 /api/v1/correlation
 """
-from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc

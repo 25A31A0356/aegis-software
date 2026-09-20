@@ -1,7 +1,6 @@
 """
 AEGIS UNIFIED DATA CORE - Unit Conversion Tests
 """
-import pytest
 from backend.app.utils.units import UnitConverter
 
 

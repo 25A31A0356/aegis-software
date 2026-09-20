@@ -3,8 +3,7 @@ AEGIS UNIFIED DATA CORE - Tests for Mobile App & SOS Endpoints
 Validates integration with https://github.com/25A31A0356/aegis-alert
 """
 import pytest
-from httpx import AsyncClient, ASGITransport
-from backend.app.main import app
+from httpx import AsyncClient
 
 
 @pytest.mark.asyncio

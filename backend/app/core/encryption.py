@@ -5,12 +5,13 @@ Ensures external provider secrets are NEVER stored or logged in plaintext.
 """
 import base64
 import hashlib
+from typing import Optional
 from cryptography.fernet import Fernet, InvalidToken
 from backend.app.core.config import settings
 
 
 class SecretVault:
-    _cipher: Fernet = None
+    _cipher: Optional[Fernet] = None
 
     @classmethod
     def _get_cipher(cls) -> Fernet:

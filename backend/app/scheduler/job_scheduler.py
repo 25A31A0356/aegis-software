@@ -2,7 +2,6 @@
 AEGIS UNIFIED DATA CORE - Background Job Scheduler
 Coordinates scheduled asynchronous data ingestion across all enabled provider sources.
 """
-import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select

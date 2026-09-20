@@ -4,18 +4,16 @@ Executes the full real-time ingestion cycle:
 FETCH -> RAW STORAGE -> PARSE -> CLASSIFY -> MAP -> NORMALIZE -> VALIDATE -> DEDUPLICATE -> DB STORE -> CACHE -> HEALTH
 """
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from backend.app.database.models import DataSource, RawObservation, NormalizedObservation, ProcessingJob, FieldMapping
+from backend.app.database.models import DataSource, RawObservation, NormalizedObservation, ProcessingJob
 from backend.app.providers.registry import ProviderRegistry
 from backend.app.core.encryption import SecretVault
 from backend.app.ingestion.validator import TelemetryValidator
-from backend.app.ingestion.deduplicator import EventDeduplicator
 from backend.app.cache.redis_client import CacheManager
-from backend.app.schemas.unified import UnifiedObservation
 from backend.app.utils.logger import logger
 
 
@@ -37,8 +35,8 @@ class IngestionPipeline:
         decrypted_key = SecretVault.decrypt_secret(source.encrypted_api_key) if source.encrypted_api_key else None
 
         # Build headers if auth is BEARER or HEADER
-        headers = dict(source.request_headers or {})
-        params = dict(source.request_params or {})
+        headers: Dict[str, Any] = dict(source.request_headers) if isinstance(source.request_headers, dict) else {}
+        params: Dict[str, Any] = dict(source.request_params) if isinstance(source.request_params, dict) else {}
         if source.auth_type == "BEARER_TOKEN" and decrypted_key:
             headers["Authorization"] = f"Bearer {decrypted_key}"
         elif source.auth_type == "API_KEY_HEADER" and decrypted_key:

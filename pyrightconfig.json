@@ -1,0 +1,11 @@
+{
+  "include": ["backend"],
+  "exclude": ["**/node_modules", "**/__pycache__", ".venv"],
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "extraPaths": [
+    ".",
+    "C:\\Users\\tst20\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages"
+  ],
+  "typeCheckingMode": "basic"
+}

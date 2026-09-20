@@ -3,7 +3,6 @@ AEGIS UNIFIED DATA CORE - SSRF Security Tests
 Verifies that malicious administrator-supplied API URLs targeting private networks,
 localhost, loopbacks, or cloud metadata endpoints are strictly blocked.
 """
-import pytest
 from backend.app.core.ssrf import SSRFGuard
 from backend.app.core.encryption import SecretVault
 

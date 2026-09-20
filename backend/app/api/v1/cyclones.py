@@ -2,7 +2,7 @@
 AEGIS UNIFIED DATA CORE - Tropical Cyclone & Depression Track API
 /api/v1/cyclones
 """
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc

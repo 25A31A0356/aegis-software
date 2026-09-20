@@ -5,7 +5,7 @@ Enforces intelligent 150m movement threshold to throttle unnecessary route recal
 """
 import math
 import httpx
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from backend.app.core.config import settings
 from backend.app.sos.matching import haversine_distance_km
 from backend.app.utils.logger import logger

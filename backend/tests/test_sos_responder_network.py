@@ -28,12 +28,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.app.database.models import (
     User, UserPreference, SOSSignal, SOSResponderCandidate, SOSAssignment,
-    SOSLocationUpdate, SOSStatusHistory, SOSNotification, utc_now
+    SOSNotification, utc_now
 )
-from backend.app.sos.state_machine import SOSStateMachine, SOSState
-from backend.app.sos.matching import SOSMatchingEngine, haversine_distance_km
-from backend.app.sos.routing import SOSRoutingEngine
-from backend.app.sos.notifications import NotificationService
+from backend.app.sos.state_machine import SOSState
 
 
 @pytest.mark.asyncio

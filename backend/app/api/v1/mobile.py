@@ -3,7 +3,7 @@ AEGIS UNIFIED DATA CORE - Mobile Client Optimization API
 /api/v1/mobile
 Lightweight endpoints specifically tailored for https://github.com/25A31A0356/aegis-alert (Android & iOS)
 """
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession

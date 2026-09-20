@@ -4,7 +4,7 @@ AEGIS UNIFIED DATA CORE - Geographic & Administrative Location API
 """
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, Query, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from backend.app.schemas.common import ApiResponse, FreshnessMetadata, ProvenanceMetadata
 from backend.app.providers.adapters.geographic import GeographicLocationProvider
 from backend.app.cache.redis_client import CacheManager

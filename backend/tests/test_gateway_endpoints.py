@@ -4,7 +4,7 @@ Verifies /health, /forecast, /location, /status, /hazards/nearby, provider degra
 """
 import pytest
 from datetime import datetime, timezone
-from backend.app.database.models import NormalizedObservation, DataSource
+from backend.app.database.models import NormalizedObservation
 
 
 @pytest.mark.asyncio

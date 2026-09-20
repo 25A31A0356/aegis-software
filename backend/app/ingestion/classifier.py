@@ -4,7 +4,6 @@ Classifies external telemetry feeds and alerts into standardized AEGIS hazard ca
 Supported Core: WEATHER, EARTHQUAKE, FLOOD, CYCLONE, STORM, LIGHTNING, WILDFIRE, AIR_QUALITY, DISASTER_ALERT, OTHER.
 Future Extensible: LANDSLIDE, TSUNAMI, DROUGHT, HEATWAVE, COLDWAVE, VOLCANIC.
 """
-from typing import List, Optional
 
 
 HAZARD_CATEGORIES = [

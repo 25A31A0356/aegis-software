@@ -1,7 +1,6 @@
 """
 AEGIS UNIFIED DATA CORE - Unit Tests for Automatic Field Detection & Mapping
 """
-import pytest
 from backend.app.ingestion.detector import FieldDetector
 from backend.app.providers.adapters.custom_http import CustomHttpProvider
 

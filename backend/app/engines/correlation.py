@@ -3,7 +3,7 @@ AEGIS UNIFIED DATA CORE - Multi-Source Correlation Engine
 Fuses multi-hazard telemetry (e.g. Rainfall Telemetry + River Level + Coastal Swell + Wind Gale)
 into unified spatial hazard zones without destroying original provider observations.
 """
-from typing import List, Dict, Any, Optional
+from typing import List
 from datetime import datetime, timezone
 from backend.app.schemas.unified import UnifiedObservation, GeoLocation, RiskEvaluationResponse
 

@@ -38,4 +38,6 @@ def test_impossible_temperature():
     )
     is_valid, err = TelemetryValidator.validate_observation(obs)
     assert is_valid is False
+    assert err is not None
     assert "Physically impossible temperature reading" in err
+

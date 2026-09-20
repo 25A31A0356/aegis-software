@@ -9,8 +9,7 @@ from backend.app.main import app
 from backend.app.database.base import Base
 from backend.app.database.session import get_db
 from backend.app.core.security import create_access_token, get_password_hash
-from backend.app.database.models import User, DataSource, FieldMapping
-from backend.app.core.config import settings
+from backend.app.database.models import User
 
 # Test in-memory SQLite database
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
