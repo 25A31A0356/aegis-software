@@ -6,7 +6,7 @@ This guide documents how the mobile client application ([https://github.com/25A3
 
 ## 1. Mobile Architecture & Communication Flow
 
-```
+```text
 +----------------------------------------------------------------------------------------------------+
 |                          MOBILE CLIENT (aegis-alert) & DATA CORE TOPOLOGY                          |
 +----------------------------------------------------------------------------------------------------+
@@ -35,16 +35,19 @@ This guide documents how the mobile client application ([https://github.com/25A3
 ## 2. Key Mobile Endpoints
 
 ### 2.1 Single-Call Mobile Sync Bundle
+
 **Endpoint**: `GET /api/v1/mobile/sync`
 
 Used on app launch, pull-to-refresh, or background geo-fence transitions to fetch all active threats, nearby emergency alerts, and national helplines in a single, battery-efficient HTTP call.
 
-#### Query Parameters:
+#### Query Parameters
+
 - `lat` (float, required): User's current GPS latitude
 - `lon` (float, required): User's current GPS longitude
 - `radius_km` (float, optional, default: 50.0): Alert search radius
 
-#### Sample Response:
+#### Sample Response
+
 ```json
 {
   "success": true,
@@ -81,11 +84,13 @@ Used on app launch, pull-to-refresh, or background geo-fence transitions to fetc
 ---
 
 ### 2.2 Submitting an Emergency SOS Distress Beacon
+
 **Endpoint**: `POST /api/v1/sos`
 
 When a citizen presses the Emergency SOS button, the mobile app sends an encrypted distress beacon with GPS coordinates, battery level, and optional medical notes.
 
-#### Request Body:
+#### Distress Beacon Request Body
+
 ```json
 {
   "caller_name": "Rohan Sharma",
@@ -105,7 +110,8 @@ When a citizen presses the Emergency SOS button, the mobile app sends an encrypt
 }
 ```
 
-#### Response:
+#### Distress Beacon Response
+
 ```json
 {
   "success": true,
@@ -126,11 +132,13 @@ When a citizen presses the Emergency SOS button, the mobile app sends an encrypt
 ---
 
 ### 2.3 Crowdsourced Citizen Damage Reporting
+
 **Endpoint**: `POST /api/v1/reports`
 
 Allows citizens to submit ground-truth reports with photo URLs, severity tags, and incident descriptions.
 
-#### Request Body:
+#### Damage Report Request Body
+
 ```json
 {
   "hazard_type": "FLOOD",
@@ -150,9 +158,8 @@ Allows citizens to submit ground-truth reports with photo URLs, severity tags, a
 
 ---
 
----
-
 ### 2.4 SOS Nearby Responder Network Integration
+
 See full spec: [sos_responder_network.md](file:///c:/Users/tst20/Aegis%20software/docs/sos_responder_network.md)
 
 1. **Opt-In as Nearby Responder**:
@@ -177,4 +184,3 @@ See full spec: [sos_responder_network.md](file:///c:/Users/tst20/Aegis%20softwar
    - If SOS submission fails due to weak cell signal, queue the beacon in local storage and retry immediately upon network reconnectivity.
 3. **Battery-Efficient Location Tracking**:
    - Use geofence region monitoring rather than continuous GPS polling to conserve battery during extended blackout scenarios.
-

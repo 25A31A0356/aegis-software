@@ -2,6 +2,7 @@
  * AGIES Map Service - GIS & Technical Layers Abstraction
  * Handles tile providers (Satellite, Radar, Streets, Terrain), radar precipitation reflectivity contours, and lightning telemetry.
  */
+import { ApiClient } from './apiClient';
 
 export interface MapTileProvider {
   id: string;
@@ -30,7 +31,7 @@ export interface LightningStrike {
 }
 
 class MapServiceClass {
-  // Safe Tile Providers (No secret keys embedded)
+  // Safe Tile Providers
   private providers: Record<string, MapTileProvider> = {
     streets: {
       id: 'streets',
@@ -62,6 +63,9 @@ class MapServiceClass {
     },
   };
 
+  private lightningCache: LightningStrike[] = [];
+  private radarCache: Record<string, RadarStormCell[]> = {};
+
   /**
    * Returns tile layer configuration for a given layer style
    */
@@ -72,85 +76,41 @@ class MapServiceClass {
   }
 
   /**
-   * Generates dynamic Doppler radar storm clusters around the active coordinates
+   * Fetches real lightning strikes from backend /api/v1/lightning
    */
-  getRadarStormCells(center: [number, number]): RadarStormCell[] {
-    const [lat, lng] = center;
-    return [
-      {
-        id: 'cell-heavy-1',
-        center: [lat + 0.08, lng + 0.06],
-        intensity: 'heavy',
-        radiusMeters: 9000,
-        dbz: 54,
-        movementHeading: 'ENE (65°)',
-        speedKmh: 28,
-      },
-      {
-        id: 'cell-mod-1',
-        center: [lat + 0.04, lng + 0.03],
-        intensity: 'moderate',
-        radiusMeters: 18000,
-        dbz: 42,
-        movementHeading: 'ENE (60°)',
-        speedKmh: 26,
-      },
-      {
-        id: 'cell-light-1',
-        center: [lat - 0.02, lng - 0.04],
-        intensity: 'light',
-        radiusMeters: 28000,
-        dbz: 26,
-        movementHeading: 'NE (50°)',
-        speedKmh: 22,
-      },
-      {
-        id: 'cell-mod-2',
-        center: [lat - 0.09, lng + 0.12],
-        intensity: 'moderate',
-        radiusMeters: 14000,
-        dbz: 38,
-        movementHeading: 'E (85°)',
-        speedKmh: 31,
-      },
-    ];
+  async fetchLiveLightning(lat?: number, lng?: number): Promise<LightningStrike[]> {
+    try {
+      const data = await ApiClient.get<any[]>('/lightning', { lat, lng, limit: 50 });
+      if (data && Array.isArray(data)) {
+        this.lightningCache = data.map((item) => ({
+          id: item.id || `lt-${Math.random().toString(36).substring(2, 7)}`,
+          coordinates: [item.latitude || 20.59, item.longitude || 78.96],
+          timestamp: item.observed_at ? new Date(item.observed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live',
+          peakCurrentKa: item.peak_current_ka || 25,
+          type: item.flash_rate_per_min > 20 ? 'cloud-to-ground' : 'intra-cloud',
+        }));
+        return this.lightningCache;
+      }
+    } catch (err) {
+      console.warn('[MapService] fetchLiveLightning error:', err);
+    }
+    return this.lightningCache;
   }
 
   /**
    * Returns active lightning flash strikes in the region
    */
   getRegionalLightningStrikes(center: [number, number]): LightningStrike[] {
-    const [lat, lng] = center;
-    return [
-      {
-        id: 'lt-1',
-        coordinates: [lat + 0.075, lng + 0.055],
-        timestamp: '1 min ago',
-        peakCurrentKa: -42,
-        type: 'cloud-to-ground',
-      },
-      {
-        id: 'lt-2',
-        coordinates: [lat + 0.09, lng + 0.07],
-        timestamp: '2 min ago',
-        peakCurrentKa: 31,
-        type: 'cloud-to-ground',
-      },
-      {
-        id: 'lt-3',
-        coordinates: [lat + 0.03, lng + 0.04],
-        timestamp: '3 min ago',
-        peakCurrentKa: -18,
-        type: 'intra-cloud',
-      },
-      {
-        id: 'lt-4',
-        coordinates: [lat - 0.085, lng + 0.11],
-        timestamp: '5 min ago',
-        peakCurrentKa: -55,
-        type: 'cloud-to-ground',
-      },
-    ];
+    this.fetchLiveLightning(center[0], center[1]).catch(console.warn);
+    return this.lightningCache;
+  }
+
+  /**
+   * Returns Doppler radar storm clusters around the active coordinates
+   */
+  getRadarStormCells(center: [number, number]): RadarStormCell[] {
+    const key = `${center[0].toFixed(2)}_${center[1].toFixed(2)}`;
+    return this.radarCache[key] || [];
   }
 
   /**

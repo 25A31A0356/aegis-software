@@ -6,7 +6,7 @@ The **AEGIS Community Reports System** provides an authoritative, centralized pi
 
 ## 1. Single Source of Truth Architecture
 
-```
+```text
                        [ Aegis Alert Mobile App ]
                               │
                (POST /api/v1/reports, Offline Sync)
@@ -38,6 +38,7 @@ Neither Aegis Web nor Aegis App maintains separate or local copies of the author
 ## 2. Category Taxonomy
 
 The following standardized public safety categories are supported:
+
 - `FLOOD`: River floods, coastal inundation, canal breaches
 - `WATERLOGGING`: Urban street water accumulation, flooded underpasses
 - `BLOCKED_ROAD`: Tree blockages, fallen debris, road closures
@@ -54,7 +55,7 @@ The following standardized public safety categories are supported:
 
 ## 3. Report Lifecycle & Verification Status
 
-```
+```text
    [Citizen Submission]
             │
             ▼
@@ -64,7 +65,8 @@ The following standardized public safety categories are supported:
       [ EXPIRED ] (Auto after 24h - 72h)                                     [ RESOLVED ] (Official / Moderator Action)
 ```
 
-### Verification Badges:
+### Verification Badges
+
 - `OFFICIAL`: Verified official alert issued by IMD, NDMA, CWC, or local district administration.
 - `VERIFIED_COMMUNITY`: Citizen report confirmed by multiple trusted community observers or verified responders.
 - `UNVERIFIED_COMMUNITY`: Newly submitted ground-truth observation pending community or official verification.
@@ -76,6 +78,7 @@ The following standardized public safety categories are supported:
 When connectivity is lost, the mobile app creates a local queue of pending reports with a client-generated UUID `idempotency_key`.
 
 When network reconnects:
+
 1. Mobile app calls `POST /api/v1/reports/sync` with the queued items.
 2. Aegis Software checks `idempotency_key` against existing database records.
 3. Existing records are skipped; new records are safely stored, activity-logged, and broadcasted to Web and App clients.

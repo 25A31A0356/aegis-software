@@ -3,6 +3,7 @@
  * Centralized location system for Homepage, Analytics, Safety, Reports, Live Map, and Ask AGIES.
  * Covers all 28 Indian States & 8 Union Territories with real-time risk, weather, & GIS coordinates.
  */
+import { ApiClient } from './apiClient';
 
 export interface LocationCoordinates {
   latitude: number;
@@ -357,10 +358,18 @@ class LocationServiceClass {
     });
   }
 
+  async getCurrentLocation(): Promise<GeolocationResult> {
+    return this.getCurrentPosition();
+  }
+
   /**
    * 2. searchLocations(query)
    * Searches by Indian State, City, District name, or GPS Coordinates (lat, lng)
    */
+  async searchLocation(query: string): Promise<LocationSearchResult[]> {
+    return this.searchLocations(query);
+  }
+
   async searchLocations(query: string): Promise<LocationSearchResult[]> {
     if (!query || query.trim().length === 0) {
       return INDIAN_CITIES_REGISTRY.slice(0, 10);
@@ -528,81 +537,63 @@ class LocationServiceClass {
     return Math.round(R * c * 10) / 10;
   }
 
-  getNearbyActivity(center: [number, number]): NearbyActivityItem[] {
-    const [cLat, cLng] = center;
+  private nearbyCache: Record<string, NearbyActivityItem[]> = {};
 
-    return [
-      {
-        id: 'act-1',
-        hazardType: 'Heavy Rain',
-        title: 'Intense Convective Cloudburst & Waterlogging',
-        locationName: 'Subway & Lowland Sector (East)',
-        distanceKm: this.calculateDistanceKm(center, [cLat + 0.04, cLng + 0.03]),
-        timestamp: '4 mins ago',
-        severity: 'Critical',
-        coordinates: [cLat + 0.04, cLng + 0.03],
-        source: 'IMD Doppler Radar DWR-04',
-        status: 'Active Red Alert',
-        recommendedAction: 'Avoid low-lying subways. Do not drive through standing water.',
-        safetyGuideSlug: 'floods',
-      },
-      {
-        id: 'act-2',
-        hazardType: 'Lightning',
-        title: 'Multiple Cloud-to-Ground Lightning Strikes',
-        locationName: 'North Ridge & Industrial Belt',
-        distanceKm: this.calculateDistanceKm(center, [cLat + 0.075, cLng + 0.055]),
-        timestamp: '12 mins ago',
-        severity: 'Warning',
-        coordinates: [cLat + 0.075, cLng + 0.055],
-        source: 'Ground Electrostatic Sensor Array',
-        status: 'Severe Activity',
-        recommendedAction: 'Stay indoors away from open fields, high trees, and metal towers.',
-        safetyGuideSlug: 'floods',
-      },
-      {
-        id: 'act-3',
-        hazardType: 'Road Blockage',
-        title: 'Tree Fall & Power Cable Snapping',
-        locationName: 'Main Arterial Highway (KM 14)',
-        distanceKm: this.calculateDistanceKm(center, [cLat - 0.03, cLng + 0.02]),
-        timestamp: '25 mins ago',
-        severity: 'Warning',
-        coordinates: [cLat - 0.03, cLng + 0.02],
-        source: 'Traffic Command & Citizen Report #482',
-        status: 'Traffic Diverted',
-        recommendedAction: 'Use Western Bypass diversion route.',
-        safetyGuideSlug: 'cyclones',
-      },
-      {
-        id: 'act-4',
-        hazardType: 'Flood',
-        title: 'River Basin Riverbank Crest Level Rising',
-        locationName: 'Downstream Catchment Zone',
-        distanceKm: this.calculateDistanceKm(center, [cLat + 0.09, cLng - 0.05]),
-        timestamp: '42 mins ago',
-        severity: 'Critical',
-        coordinates: [cLat + 0.09, cLng - 0.05],
-        source: 'Central Water Commission (CWC)',
-        status: 'Breach Watch',
-        recommendedAction: 'Evacuate riverbank settlements to designated safe shelters.',
-        safetyGuideSlug: 'floods',
-      },
-      {
-        id: 'act-5',
-        hazardType: 'Cyclone',
-        title: 'Squally Gale Winds (75-85 km/h gusts)',
-        locationName: 'Coastal Embankment Sector',
-        distanceKm: this.calculateDistanceKm(center, [cLat - 0.08, cLng - 0.07]),
-        timestamp: '1 hr ago',
-        severity: 'Critical',
-        coordinates: [cLat - 0.08, cLng - 0.07],
-        source: 'IMD Coastal Telemetry',
-        status: 'Cyclone Warning',
-        recommendedAction: 'Secure roof sheets. Fishermen warned against deep sea venture.',
-        safetyGuideSlug: 'cyclones',
-      },
-    ];
+  async fetchNearbyActivity(center: [number, number]): Promise<NearbyActivityItem[]> {
+    const key = `${center[0].toFixed(2)}_${center[1].toFixed(2)}`;
+    try {
+      const backendNearby = await ApiClient.get<any[]>('/hazards/nearby', {
+        lat: center[0],
+        lng: center[1],
+        radius_km: 75,
+      });
+
+      if (backendNearby && Array.isArray(backendNearby)) {
+        const mapped: NearbyActivityItem[] = backendNearby.map((item) => {
+          let hType: NearbyActivityItem['hazardType'] = 'Other';
+          const t = (item.type || '').toLowerCase();
+          if (t.includes('flood') || t.includes('rain')) hType = 'Flood';
+          else if (t.includes('lightning')) hType = 'Lightning';
+          else if (t.includes('cyclone') || t.includes('wind')) hType = 'Cyclone';
+          else if (t.includes('earthquake')) hType = 'Earthquake';
+          else if (t.includes('fire')) hType = 'Fire';
+          else if (t.includes('landslide')) hType = 'Landslide';
+          else if (t.includes('road')) hType = 'Road Blockage';
+
+          const sevRaw = (item.severity || 'WARNING').toUpperCase();
+          const sev: NearbyActivityItem['severity'] =
+            sevRaw === 'CRITICAL' ? 'Critical' : sevRaw === 'HIGH' ? 'Warning' : sevRaw === 'MODERATE' ? 'Watch' : 'Minor';
+
+          return {
+            id: item.id || `act-${Math.random().toString(36).substring(2, 7)}`,
+            hazardType: hType,
+            title: item.title || `${hType} Telemetry Alert`,
+            locationName: item.location?.name || `${item.distance_km?.toFixed(1) || 10}km away`,
+            distanceKm: item.distance_km || this.calculateDistanceKm(center, [item.location?.latitude || center[0], item.location?.longitude || center[1]]),
+            timestamp: item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live',
+            severity: sev,
+            coordinates: [item.location?.latitude || center[0], item.location?.longitude || center[1]],
+            source: item.source || 'AEGIS Multi-Hazard Grid',
+            status: item.status || 'Active Surveillance',
+            recommendedAction: item.description || 'Follow official disaster guidelines and local advisories.',
+            safetyGuideSlug: hType.toLowerCase(),
+          };
+        });
+
+        this.nearbyCache[key] = mapped;
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('[LocationService] fetchNearbyActivity error:', err);
+    }
+    return this.nearbyCache[key] || [];
+  }
+
+  getNearbyActivity(center: [number, number]): NearbyActivityItem[] {
+    const key = `${center[0].toFixed(2)}_${center[1].toFixed(2)}`;
+    // Trigger async fetch to populate cache
+    this.fetchNearbyActivity(center).catch(console.warn);
+    return this.nearbyCache[key] || [];
   }
 }
 

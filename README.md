@@ -1,5 +1,7 @@
 # 🛡️ AEGIS ALERT — Public Safety & Multi-Hazard Disaster Intelligence Grid
-### SIH 2026 Master Technical Documentation & Comprehensive System Architecture
+
+## SIH 2026 Master Technical Documentation & Comprehensive System Architecture
+
 **Applicability**: National Disaster Management Authority (NDMA), Ministry of Home Affairs (MHA), State Disaster Management Authorities (SDMAs), and 1.4 Billion Citizens
 
 [![Backend Core](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -14,6 +16,7 @@
 ---
 
 ## 📑 Table of Contents
+
 1. [What is AEGIS? (Executive Overview)](#1-what-is-aegis-executive-overview)
 2. [Who Uses What? (User Roles & Ecosystem Breakdown)](#2-who-uses-what-user-roles--ecosystem-breakdown)
 3. [Workspace 1: Aegis Software (Backend & AI Engine)](#3-workspace-1-aegis-software-backend--ai-engine)
@@ -41,20 +44,23 @@
 **AEGIS** (*Autonomous Emergency Grid & Intelligence System*) is an enterprise-grade public safety, multi-hazard early warning, and disaster triage platform built under the statutory authority of the **Disaster Management Act of 2005 (Section 10(2)(l))**.
 
 ### The Core Problem
+
 When major disasters strike (floods, cyclones, landslides, cloudbursts):
+
 - Disaster bulletins from the **IMD, CWC, CPCB, and INCOIS** are published in isolated silos without real-time spatial correlation.
 - Warning alerts are issued reactively rather than computed through physics-based runoff and atmospheric instability models.
 - When cellular data fails or phone lines get jammed, victims cannot transmit GPS coordinates to rescue forces.
 - Control rooms lack automated volunteer dispatching and expose citizen private phone numbers.
 
 ### The Solution
+
 AEGIS unifies national meteorological data, automated AI correlation (0–100 risk scoring), interactive GIS maps, Rapido-style proximity volunteer matching, and offline-resilient mobile apps into a single operational grid.
 
 ---
 
 ## 2. Who Uses What? (User Roles & Ecosystem Breakdown)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                    WHO USES WHICH COMPONENT?                                     │
 ├────────────────────────────┬─────────────────────────────┬───────────────────────────────────────┤
@@ -80,14 +86,16 @@ AEGIS unifies national meteorological data, automated AI correlation (0–100 ri
 
 Located at `C:\Users\tst20\Aegis software` ([`GitHub: aegis-software`](https://github.com/25A31A0356/aegis-software)).
 
-### What Technologies Were Used?
+### Backend Technologies Used
+
 - **Core Framework**: FastAPI (Python 3.13) with AsyncIO.
 - **ORM & Database**: Async SQLAlchemy 2.0 with PostgreSQL 16 (`asyncpg`), PostGIS, and SQLite (`aiosqlite`) fallback.
 - **Caching & Real-Time Broker**: Redis 7.0 for spatial caching and pub/sub message fan-out.
 - **Data Validation & Schemas**: Pydantic v2 BaseSettings and BaseModel.
 - **AI Intelligence**: Google Gemini 1.5 Flash API connector + Local Domain Situation Report Synthesizer.
 
-### What Does the Backend Do?
+### Backend Core Functions
+
 1. **Automated Multi-Source Ingestion**: Runs background schedulers polling 8 data providers every 5 minutes:
    - `imd.py`: IMD Doppler radar reflectivity, cyclone tracks, and rainfall bulletins.
    - `cwc.py`: CWC water reservoir percentages and river gauge danger overtopping.
@@ -106,14 +114,16 @@ Located at `C:\Users\tst20\Aegis software` ([`GitHub: aegis-software`](https://g
 
 Located at `C:\Users\tst20\aegis web` ([`GitHub: Aegis-web`](https://github.com/25A31A0356/Aegis-web)).
 
-### What Technologies Were Used?
+### Web Technologies Used
+
 - **Framework**: React 19, TypeScript 5.7, Vite 6.1.
 - **Styling & UI**: Tailwind CSS 3.4, Lucide React icons, PostCSS, Autoprefixer.
 - **Mapping & GIS**: Leaflet 1.9.4, React-Leaflet 5.0, OpenStreetMap, and Google Maps Fallback Loader.
 - **Charts & Visualization**: Recharts 2.15 (Intensity timeline charts, atmospheric matrices, bar graphs).
 - **State & Real-Time**: Context API (`LocationContext`, `NotificationContext`, `SOSContext`, `DataProviderContext`), `RealtimeHub` WebSockets & SSE.
 
-### What Does the Web Portal Do?
+### Web Portal Features
+
 - **Dashboard (`DashboardPage.tsx`)**: Displays national composite risk score, atmospheric gauges, state risk matrix, and live disaster event ticker.
 - **Live GIS Tactical Map (`LiveMapPage.tsx`)**: Fullscreen multi-layer tactical map with 8 toggleable overlays (Doppler radar, satellite IR, lightning strikes, flood polygons, active SOS beacons, safe shelters).
 - **SOS Command Center (`SOSPage.tsx`)**: Triage console for dispatchers with live beacon feeds, responder status tracking, ETA counter, route simulator, and phone number privacy masking.
@@ -127,7 +137,8 @@ Located at `C:\Users\tst20\aegis web` ([`GitHub: Aegis-web`](https://github.com/
 
 Located at `C:\Users\tst20\gaegisalert` ([`GitHub: aegis-alert`](https://github.com/25A31A0356/aegis-alert)).
 
-### What Technologies Were Used?
+### Mobile Technologies Used
+
 - **Framework**: React Native 0.81, Expo SDK 54, Expo Router v6.
 - **Styling**: NativeWind (Tailwind CSS for React Native).
 - **Device Hardware Integrations**:
@@ -137,7 +148,8 @@ Located at `C:\Users\tst20\gaegisalert` ([`GitHub: aegis-alert`](https://github.
   - `expo-secure-store`: Encrypted on-device profile and emergency contact storage.
   - `expo-notifications`: Push alert notifications for critical weather events.
 
-### What Does the Mobile App Do?
+### Mobile App Features
+
 1. **1-Tap Emergency SOS & 8-Language Voice SOS (`beacon.tsx`)**: Citizens tap the SOS button or speak in **Hindi, Assamese, Bengali, Marathi, Telugu, Tamil, Gujarati, or English**. The AI speech parser extracts trapped victim counts and medical emergencies automatically.
 2. **Rapido-Style Responder Dispatch (`NearbySosRequestModal.tsx`)**: Nearby citizen volunteers receive an incoming dispatch offer with a 45-second countdown, distance indicator, and accept/reject actions.
 3. **"I Am Safe" Check-In (`safe.tsx`)**: 1-tap check-in broadcasting safety status and GPS coordinates to family contacts via direct offline SMS.
@@ -150,7 +162,7 @@ Located at `C:\Users\tst20\gaegisalert` ([`GitHub: aegis-alert`](https://github.
 
 The AEGIS GIS Map Engine renders high-resolution, multi-layer spatial data across both Web and Mobile:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        AEGIS TACTICAL GIS MAP VISUAL LAYERS                            │
 ├────────────────────────────┬───────────────────────────────────────────────────────────┤
@@ -414,7 +426,7 @@ erDiagram
 ## 10. Master API Route Catalog (26 Specialized Routers)
 
 | Method | Endpoint Path | Router File | Purpose & Function | Auth / Role | Input Parameters | Output Response Format |
-|---|---|---|---|---|---|---|
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/discovery` | `discovery.py` | Machine-readable API discovery & system status catalog | Public | None | `{ success, status, endpoints, version }` |
 | `POST` | `/api/v1/auth/register` | `auth.py` | Register new citizen or volunteer responder | Public | `{ email, password, full_name, phone_number, role }` | `{ access_token, token_type, user }` |
 | `POST` | `/api/v1/auth/login` | `auth.py` | Authenticate user & issue JWT bearer token | Public | `{ username, password }` (OAuth2 Form) | `{ access_token, token_type, user }` |
@@ -458,6 +470,7 @@ erDiagram
 ## 11. SIH 2026 PPT Slide-by-Slide Content (Slides 1 to 6)
 
 ### 📽️ Slide 1 — Title Page & Problem Identification
+
 - **Project Name**: **AEGIS ALERT** (*Autonomous Emergency Grid & Intelligence System*)
 - **Theme**: Disaster Management / Public Safety / Smart Governance
 - **Category**: Software Edition (with Phase 2 IoT Hardware Extension)
@@ -468,6 +481,7 @@ erDiagram
 ---
 
 ### 📽️ Slide 2 — Idea & Proposed Solution
+
 - **The Challenge**:
   - Siloed agency telemetry (IMD vs CWC vs CPCB vs INCOIS).
   - Fatal delay in computing predictive pre-judgments before embankments breach.
@@ -481,6 +495,7 @@ erDiagram
 ---
 
 ### 📽️ Slide 3 — Technical Architecture & Approach
+
 - **Backend & AI Gateway**: FastAPI (Python 3.13), Async SQLAlchemy 2.0, PostgreSQL 16 / PostGIS, Redis 7.0 cache, Google Gemini 1.5 Flash AI context synthesizer.
 - **Web Command Center**: React 19, TypeScript 5.7, Vite 6.1, Tailwind CSS, Leaflet GIS with 8 toggleable hazard layers, real-time dispatcher triage console.
 - **Mobile & Edge Grid**: React Native (Expo SDK 54), NativeWind, 8-language voice SOS parser, offline SQLite sync.
@@ -488,6 +503,7 @@ erDiagram
 ---
 
 ### 📽️ Slide 4 — Feasibility, Viability & Scalability
+
 - **Technical Feasibility**: Built on mature, open-source industrial frameworks; **287 automated tests passing** (100% pass rate).
 - **Economic Viability**: Zero cost in specialized citizen hardware—operates on standard smartphones, tablets, and laptops.
 - **Scalability**: Stateless asynchronous gateway capable of handling **10,000+ telemetry events/sec** with sub-100-byte binary distress frames.
@@ -496,6 +512,7 @@ erDiagram
 ---
 
 ### 📽️ Slide 5 — Social, Humanitarian & Measurable Impact
+
 - **Target Beneficiaries**: 1.4 Billion Indian citizens across 28 States and 8 Union Territories.
 - **Zero Panic Spillover**: Precision mathematical geofencing alerts only citizens in active red zones.
 - **Inclusivity**: Illiterate and elderly citizens protected via spoken voice SOS in 8 Indian languages.
@@ -505,6 +522,7 @@ erDiagram
 ---
 
 ### 📽️ Slide 6 — Research Citations & Statutory Standards
+
 - **Statutory Frameworks**: *Disaster Management Act, 2005 (Act No. 53 of 2005)*; *NDMA National Flood & Landslide Guidelines (2008/2009)*.
 - **Telecommunications Standards**: *ITU-T Recommendation X.1303 (CAP v1.2)*; *3GPP TS 23.041 Cell Broadcast Service*.
 - **Scientific Literature**:
@@ -560,7 +578,7 @@ flowchart TD
 ## 13. Feasibility, Viability & Scalability Analysis
 
 | Parameter | Traditional Municipal System | Standard Mobile Apps | AEGIS ALERT Platform |
-|---|---|---|---|
+| :--- | :--- | :--- | :--- |
 | **Software Cost** | Multimillion-dollar proprietary systems | Free download, fails in 0-signal | **100% Open-Source & Self-Hostable** |
 | **Internet Dependency** | High (optical fiber) | **100% Dependent (fails if towers die)** | **Dual-Resilient (Online WS + Offline SMS/Calling)** |
 | **Response Latency** | Manual phone calls (30–90 mins) | Uncoordinated reports (hours) | **Automated Proximity Matching (< 6 mins)** |
@@ -580,7 +598,7 @@ flowchart TD
 
 ## 15. Scientific Formulas & Research References
 
-```
+```text
 A. Mohr-Coulomb Landslide Shear Stability:
    τ_f = c' + (σ - u_w) * tan(ϕ')
    Where u_w = ρ_w * g * h_w * cos²(θ)
@@ -614,7 +632,7 @@ E. Moving Z-Score Sensor Anomaly Filter:
 
 ## 17. Testing & Quality Assurance Matrix (287 Passing Tests)
 
-```
+```text
 ========================================================================================
                                AEGIS PLATFORM TEST SUMMARY
 ========================================================================================
@@ -631,25 +649,31 @@ E. Moving Z-Score Sensor Anomaly Filter:
 ## 18. Installation & Local Setup Guide
 
 ### 1. Start Backend Core (FastAPI)
+
 ```bash
 cd "C:\Users\tst20\Aegis software\backend"
 $env:PYTHONPATH="C:\Users\tst20\Aegis software"
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
 *API Swagger Documentation: `http://localhost:8000/docs`*
 
 ### 2. Start Web Command Center (React 19)
+
 ```bash
 cd "C:\Users\tst20\aegis web"
 npm run dev
 ```
+
 *Web Application Portal: `http://localhost:5173`*
 
 ### 3. Start Citizen Mobile App (Expo)
+
 ```bash
 cd "C:\Users\tst20\gaegisalert"
 npx expo start --web --port 8081
 ```
+
 *Mobile Web Portal: `http://localhost:8081` | Android Emulator: `npx expo start --android`*
 
 ---
@@ -659,7 +683,8 @@ npx expo start --web --port 8081
 For extreme zero-connectivity tribal and deep mountain gorge regions where cell towers are destroyed, AEGIS includes an optional **Phase 2 Cyber-Physical Warning Mast** design:
 
 ### ⚡ Circuit Block Diagram
-```
+
+```text
        [ 20W Monocrystalline Solar Panel ]
                        │ (18V DC Solar Influx)
                        ▼
@@ -680,6 +705,7 @@ For extreme zero-connectivity tribal and deep mountain gorge regions where cell 
 ```
 
 ### Bill of Materials (BOM) — Target Unit Cost: ₹3,775 (~$45 USD)
+
 - **ESP32 Microcontroller** (₹380) | **SX1262 LoRa 868MHz** (₹420) | **120dB Piezo Siren** (₹320)
 - **DFPlayer Voice ROM + PAM8403 10W Amp** (₹140) | **48-LED Strobe** (₹260) | **MAX7219 Matrix** (₹210)
 - **20W Solar Panel** (₹750) | **MPPT Controller** (₹240) | **12V 6Ah LiFePO4 Battery** (₹480)

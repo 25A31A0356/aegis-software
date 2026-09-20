@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, ShieldAlert, Phone, MapPin, AlertTriangle, Users, Compass, ChevronRight, Activity } from 'lucide-react';
 import { StateRiskData } from '../../types/location';
-import { DEMO_HAZARDS } from '../../data/demoHazards';
+import { HazardService } from '../../services/hazardService';
 
 interface StateDetailDrawerProps {
   state: StateRiskData | null;
@@ -18,9 +18,12 @@ export const StateDetailDrawer: React.FC<StateDetailDrawerProps> = ({
 }) => {
   if (!state) return null;
 
-  // Find hazards related to this state
-  const stateHazards = DEMO_HAZARDS.filter(
-    (h) => h.location.state.toLowerCase().includes(state.name.toLowerCase()) || state.name.toLowerCase().includes(h.location.state.toLowerCase())
+  // Find hazards related to this state from live HazardService
+  const allHazards = HazardService.getAllHazards();
+  const stateHazards = allHazards.filter(
+    (h) =>
+      h.location.state.toLowerCase().includes(state.name.toLowerCase()) ||
+      state.name.toLowerCase().includes(h.location.state.toLowerCase())
   );
 
   return (

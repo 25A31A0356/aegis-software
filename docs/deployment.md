@@ -7,12 +7,14 @@ Repository: `https://github.com/25A31A0356/aegis-software`
 ## 1. Local Development Setup
 
 ### Prerequisites
+
 - Python 3.11+ (Python 3.13 tested and certified)
 - Node.js 20+ & npm
 - PostgreSQL 16 with PostGIS extension (Automated SQLite fallback enabled for development)
 - Redis 7.2 (Automated In-Memory dictionary cache fallback enabled for development)
 
 ### Step 1: Clone and Configure Environment
+
 ```bash
 git clone https://github.com/25A31A0356/aegis-software.git
 cd "aegis-software"
@@ -22,6 +24,7 @@ cp .env.example .env
 ```
 
 ### Step 2: Backend Setup
+
 ```bash
 # Set up Python virtual environment
 python -m venv venv
@@ -35,7 +38,7 @@ source venv/bin/activate
 # Install backend dependencies
 pip install -r backend/requirements.txt
 
-# Run full automated test suite (33 tests)
+# Run full automated test suite (69 tests)
 python -m pytest backend/tests
 
 # Launch FastAPI development gateway server
@@ -43,6 +46,7 @@ uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Step 3: Frontend Admin Console Setup
+
 ```bash
 # Install frontend dependencies
 npm install
@@ -55,6 +59,7 @@ npm run dev
 ```
 
 The gateway will be accessible at:
+
 - Web Admin / Gateway UI: `http://localhost:5173`
 - FastAPI Interactive Swagger Docs: `http://localhost:8000/docs`
 - Root Health Probe: `http://localhost:8000/health`
@@ -71,6 +76,7 @@ docker compose up -d --build
 ```
 
 ### Service Health Checks
+
 ```bash
 docker compose ps
 ```
@@ -87,7 +93,9 @@ docker compose ps
 ## 3. Database Migration Instructions
 
 ### Initial Schema & Extensions
+
 Execute PostgreSQL DDL migrations using `psql` or database orchestration:
+
 ```bash
 # 1. Base Geospatial & Alert Schema
 psql -U aegis_user -d aegis_db -f database/migrations/001_initial_schema.sql

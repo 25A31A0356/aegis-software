@@ -27,16 +27,21 @@ When users or administrators register new API endpoints or run the Live API Test
 ## 3. Cryptography & Secret Vault
 
 ### Encryption at Rest
+
 All third-party API credentials, bearer tokens, and custom authorization headers stored in the PostgreSQL database are encrypted at rest using **Fernet (AES-128-CBC + HMAC-SHA256 authenticated encryption)** via `SecretVault` (`backend/app/core/encryption.py`):
+
 - `ENCRYPTION_KEY` is derived from a 32-byte cryptographic secret configured strictly via environment variables.
 - Secret keys are never serialized into JSON responses or returned in administrative list endpoints.
 
 ### Masking & Log Redaction
+
 - When secrets are displayed in the Admin Console or API responses, they are deterministically masked:
-  ```
+
+  ```text
   Original:  IMD_RADAR_PROD_KEY_998124_AB92
   Masked:    ****************AB92
   ```
+
 - The structured logging handler automatically filters and redacts key patterns matching:
   - `Bearer eyJ...`
   - `password=...`, `secret=...`, `token=...`, `api_key=...`
@@ -57,6 +62,7 @@ All third-party API credentials, bearer tokens, and custom authorization headers
 ## 5. Security Audit Logging
 
 All administrative mutations (source registration, mapping edits, alert broadcasts, token creation) generate immutable records in the `audit_logs` table containing:
+
 - `action`: e.g. `CREATE_SOURCE`, `UPDATE_MAPPING`, `TRIGGER_INGESTION`.
 - `actor_id`: User UUID or `SYSTEM_SCHEDULER`.
 - `client_ip`: Remote IP address extracted from `X-Forwarded-For`.

@@ -1,5 +1,4 @@
-import { CITY_COORDINATES } from './weatherService';
-import { DEMO_STATES } from '../data/demoStates';
+import { ApiClient } from './apiClient';
 import { ExportDataPayload } from './exportService';
 
 export interface AnalyticsFilterState {
@@ -41,136 +40,127 @@ export interface AnalyticsResult {
     riskScore: number;
   }>;
   isLiveData: boolean;
+  hasData: boolean;
+  message?: string;
   generatedTimestamp: string;
 }
 
 export class AnalyticsService {
   /**
-   * Generates dynamic, coherent hazard analytics responding to filter state
+   * Fetches authentic PostgreSQL disaster analytics via the central /api/v1/analytics endpoint.
+   * If no real records exist for the selected location/hazard, returns hasData: false
+   * and "Insufficient real data available for this location."
    */
-  public static getAnalyticsData(filter: AnalyticsFilterState): AnalyticsResult {
+  public static async fetchAnalyticsData(filter: AnalyticsFilterState): Promise<AnalyticsResult> {
     const { location, hazard, dateRange } = filter;
     const now = new Date();
 
-    // 1. Multipliers based on hazard type
-    let baseIntensity = 'Cat-4 (185 km/h)';
-    let baseIntensityLabel = 'Peak Cyclone Gusts';
-    let baseEvents = 38;
-    let baseAffected = 2400000;
-    let trend = '+14% vs Previous Period';
-    let trendPositive = true;
+    try {
+      const resp = await ApiClient.get<any>('/analytics', {
+        location: location === 'all' ? 'india' : location,
+        hazard: hazard === 'all' ? 'all' : hazard,
+        date_range: dateRange || '7d',
+      });
 
-    if (hazard === 'flood') {
-      baseIntensity = '142 mm / hr';
-      baseIntensityLabel = 'Max Inundation Rate';
-      baseEvents = 52;
-      baseAffected = 1850000;
-      trend = '+22% Inundation Velocity';
-    } else if (hazard === 'earthquake') {
-      baseIntensity = 'M6.2 Richter';
-      baseIntensityLabel = 'Max Seismic Magnitude';
-      baseEvents = 14;
-      baseAffected = 420000;
-      trend = '-8% Seismic Frequency';
-      trendPositive = false;
-    } else if (hazard === 'heatwave') {
-      baseIntensity = '44.8°C Ambient';
-      baseIntensityLabel = 'Peak Thermal Dome';
-      baseEvents = 29;
-      baseAffected = 3100000;
-      trend = '+18% Thermal Index';
-    } else if (hazard === 'landslide') {
-      baseIntensity = 'High Slip Rate';
-      baseIntensityLabel = 'Geological Debris Vector';
-      baseEvents = 19;
-      baseAffected = 120000;
-      trend = '+9% Saturated Slope Area';
+      if (resp) {
+        return {
+          stats: {
+            peakIntensity: resp.stats?.peak_intensity || 'No active alerts',
+            peakIntensityLabel: resp.stats?.peak_intensity_label || 'Telemetry Status',
+            totalEvents: resp.stats?.total_events || 0,
+            activeEvents: resp.stats?.active_events || 0,
+            peopleAffected: resp.stats?.people_affected || '0',
+            peopleAffectedExact: resp.stats?.people_affected_exact || 0,
+            trend: resp.stats?.trend || 'Real-time database sync',
+            trendPositive: resp.stats?.trend_positive ?? true,
+            trendSubtext: resp.stats?.trend_subtext || 'Aggregated from real PostgreSQL observations & reports',
+          },
+          timeline: (resp.timeline || []).map((t: any) => ({
+            date: t.date,
+            intensityIndex: t.intensity_index || 0,
+            peopleAffected: t.people_affected || 0,
+            alertCount: t.alert_count || 0,
+            baseline: t.baseline || 0,
+          })),
+          severityDistribution: resp.severity_distribution || [
+            { name: 'Critical (Red)', count: 0, percentage: 0, color: '#E94B68' },
+            { name: 'Warning (Amber)', count: 0, percentage: 0, color: '#F4C84A' },
+            { name: 'Moderate (Cyan)', count: 0, percentage: 0, color: '#18C3D0' },
+            { name: 'Minor (Green)', count: 0, percentage: 0, color: '#45C79A' },
+          ],
+          regionalImpact: (resp.regional_impact || []).map((r: any) => ({
+            region: r.region,
+            events: r.events,
+            affected: r.affected,
+            severity: r.severity || 'moderate',
+            riskScore: r.risk_score || 50,
+          })),
+          isLiveData: true,
+          hasData: Boolean(resp.has_data),
+          message: resp.message || (!resp.has_data ? 'Insufficient real data available for this location.' : undefined),
+          generatedTimestamp: new Date(resp.generated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' IST',
+        };
+      }
+    } catch (err) {
+      console.warn('[AnalyticsService] Backend analytics fetch failed:', err);
     }
 
-    // 2. Adjustments based on location
-    let locMultiplier = 1.0;
-    if (location !== 'all' && location !== 'india') {
-      locMultiplier = 0.45;
-      baseEvents = Math.round(baseEvents * 0.4);
-      baseAffected = Math.round(baseAffected * 0.35);
-    }
-
-    // 3. Adjustments based on date range
-    let pointsCount = 7;
-    let dateLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'];
-
-    if (dateRange === '24h') {
-      pointsCount = 6;
-      dateLabels = ['00:00', '04:00', '08:00', '12:00', '16:00', 'Now'];
-    } else if (dateRange === '30d') {
-      pointsCount = 6;
-      dateLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Recent'];
-      baseEvents = Math.round(baseEvents * 2.8);
-      baseAffected = Math.round(baseAffected * 2.4);
-    } else if (dateRange === '90d' || dateRange === 'ytd') {
-      pointsCount = 6;
-      dateLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-      baseEvents = Math.round(baseEvents * 6.5);
-      baseAffected = Math.round(baseAffected * 5.2);
-    }
-
-    // Formatted affected string
-    const formatAffected = (num: number) => {
-      if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-      if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
-      return String(num);
-    };
-
-    // 4. Timeline time-series generation
-    const timeline = dateLabels.map((lbl, idx) => {
-      const curve = Math.sin((idx / pointsCount) * Math.PI) * 25 + 50;
-      const noise = ((idx * 7) % 15) - 7;
-      const intensity = Math.min(100, Math.max(20, Math.round(curve + noise)));
-      const affected = Math.round((baseAffected / pointsCount) * (0.8 + (idx / pointsCount) * 0.4));
-      const alerts = Math.max(1, Math.round((baseEvents / pointsCount) * (0.7 + (idx / pointsCount) * 0.6)));
-
-      return {
-        date: lbl,
-        intensityIndex: intensity,
-        peopleAffected: affected,
-        alertCount: alerts,
-        baseline: 40,
-      };
-    });
-
-    // 5. Severity Distribution
-    const severityDistribution = [
-      { name: 'Critical (Red)', count: Math.round(baseEvents * 0.35), percentage: 35, color: '#E94B68' },
-      { name: 'Warning (Amber)', count: Math.round(baseEvents * 0.4), percentage: 40, color: '#F4C84A' },
-      { name: 'Moderate (Cyan)', count: Math.round(baseEvents * 0.18), percentage: 18, color: '#18C3D0' },
-      { name: 'Minor (Green)', count: Math.round(baseEvents * 0.07), percentage: 7, color: '#45C79A' },
-    ];
-
-    // 6. Regional Impact
-    const regions = [
-      { region: 'Odisha Coastal Belt', events: 14, affected: 850000, severity: 'critical' as const, riskScore: 88 },
-      { region: 'Andhra Pradesh (North)', events: 11, affected: 620000, severity: 'critical' as const, riskScore: 82 },
-      { region: 'West Bengal Delta', events: 9, affected: 480000, severity: 'warning' as const, riskScore: 74 },
-      { region: 'Maharashtra (Konkan)', events: 7, affected: 290000, severity: 'warning' as const, riskScore: 68 },
-      { region: 'Assam Valley', events: 5, affected: 160000, severity: 'moderate' as const, riskScore: 56 },
-    ];
-
+    // Honest empty response when no data exists
     return {
       stats: {
-        peakIntensity: baseIntensity,
-        peakIntensityLabel: baseIntensityLabel,
-        totalEvents: baseEvents,
-        activeEvents: Math.round(baseEvents * 0.3),
-        peopleAffected: formatAffected(baseAffected),
-        peopleAffectedExact: baseAffected,
-        trend,
-        trendPositive,
-        trendSubtext: 'Compared to historical 3-year baseline',
+        peakIntensity: 'No active data',
+        peakIntensityLabel: 'Telemetry Status',
+        totalEvents: 0,
+        activeEvents: 0,
+        peopleAffected: '0',
+        peopleAffectedExact: 0,
+        trend: 'No trend data',
+        trendPositive: true,
+        trendSubtext: 'Insufficient real data available for this location.',
       },
-      timeline,
-      severityDistribution,
-      regionalImpact: regions,
+      timeline: [],
+      severityDistribution: [
+        { name: 'Critical (Red)', count: 0, percentage: 0, color: '#E94B68' },
+        { name: 'Warning (Amber)', count: 0, percentage: 0, color: '#F4C84A' },
+        { name: 'Moderate (Cyan)', count: 0, percentage: 0, color: '#18C3D0' },
+        { name: 'Minor (Green)', count: 0, percentage: 0, color: '#45C79A' },
+      ],
+      regionalImpact: [],
       isLiveData: true,
+      hasData: false,
+      message: 'Insufficient real data available for this location.',
+      generatedTimestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' IST',
+    };
+  }
+
+  /**
+   * Synchronous fallback getter for backward compatibility
+   */
+  public static getAnalyticsData(filter: AnalyticsFilterState): AnalyticsResult {
+    const now = new Date();
+    return {
+      stats: {
+        peakIntensity: 'Querying backend...',
+        peakIntensityLabel: 'Telemetry Status',
+        totalEvents: 0,
+        activeEvents: 0,
+        peopleAffected: '0',
+        peopleAffectedExact: 0,
+        trend: 'Real-time database sync',
+        trendPositive: true,
+        trendSubtext: 'Aggregated from real PostgreSQL database',
+      },
+      timeline: [],
+      severityDistribution: [
+        { name: 'Critical (Red)', count: 0, percentage: 0, color: '#E94B68' },
+        { name: 'Warning (Amber)', count: 0, percentage: 0, color: '#F4C84A' },
+        { name: 'Moderate (Cyan)', count: 0, percentage: 0, color: '#18C3D0' },
+        { name: 'Minor (Green)', count: 0, percentage: 0, color: '#45C79A' },
+      ],
+      regionalImpact: [],
+      isLiveData: true,
+      hasData: false,
+      message: 'Insufficient real data available for this location.',
       generatedTimestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' IST',
     };
   }
@@ -180,8 +170,8 @@ export class AnalyticsService {
    */
   public static createExportPayload(filter: AnalyticsFilterState, result: AnalyticsResult): ExportDataPayload {
     return {
-      title: 'AGIES ALERT - Hazard Analytics Briefing',
-      subtitle: 'Intensity, severity and regional impact insights for selected hazards.',
+      title: 'AEGIS ALERT - Hazard Analytics Briefing',
+      subtitle: 'Authoritative intensity, severity and regional impact insights from central PostgreSQL database.',
       generatedAt: result.generatedTimestamp,
       location: filter.location === 'all' ? 'National Overview (India)' : filter.location.toUpperCase(),
       hazard: filter.hazard.toUpperCase(),

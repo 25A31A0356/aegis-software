@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { DEMO_STATES } from '../data/demoStates';
-import { DEMO_CITY_WEATHER } from '../data/demoWeather';
 import { StateRiskData } from '../types/location';
 import { WeatherTelemetry } from '../types/weather';
 import { WeatherService, CITY_COORDINATES } from '../services/weatherService';
@@ -11,7 +10,6 @@ import {
   GeolocationResult,
   INDIAN_CITIES_REGISTRY,
 } from '../services/locationService';
-import { ProviderRegistry } from '../providers/ProviderRegistry';
 
 export interface LocationErrorState {
   code: string;
@@ -64,8 +62,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isGpsActive, setIsGpsActive] = useState<boolean>(false);
   const [isNationalOverview, setIsNationalOverview] = useState<boolean>(false);
 
-  const [weather, setWeather] = useState<WeatherTelemetry>(
-    () => DEMO_CITY_WEATHER['mumbai'] || DEMO_CITY_WEATHER['hyderabad']
+  const [weather, setWeather] = useState<WeatherTelemetry>(() =>
+    WeatherService.getWeatherForCity('mumbai')
   );
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [isLoadingWeather, setIsLoadingWeather] = useState<boolean>(false);
@@ -84,16 +82,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     async (coords: [number, number], cityName: string, stateIdHint?: string) => {
       setIsLoadingWeather(true);
       try {
-        const weatherProvider = ProviderRegistry.getWeatherProvider();
-        const result = await weatherProvider.getWeatherByCoordinates(coords[0], coords[1]);
-        if (result && result.data) {
-          setWeather(result.data);
-        } else {
-          // Fallback to closest demo city
-          const cityKey = cityName.toLowerCase().split(' ')[0];
-          const demo = DEMO_CITY_WEATHER[cityKey] || DEMO_CITY_WEATHER['mumbai'];
-          setWeather({ ...demo, cityName, coordinates: coords });
-        }
+        const liveWeather = await WeatherService.fetchLiveWeatherByCoordinates(coords[0], coords[1], cityName);
+        setWeather(liveWeather);
       } catch (e) {
         console.warn('[LocationContext] Weather provider sync error:', e);
       } finally {

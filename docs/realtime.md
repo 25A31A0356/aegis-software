@@ -1,6 +1,7 @@
 # AEGIS Real-Time Synchronization & Event Engine
 
 Aegis Software provides dual-protocol real-time streaming:
+
 1. **WebSocket Gateway**: `ws://localhost:8000/api/v1/ws` (Bidirectional low-latency event channel)
 2. **Server-Sent Events (SSE)**: `http://localhost:8000/api/v1/activity/stream` (Unidirectional lightweight HTTP stream)
 
@@ -9,11 +10,13 @@ Aegis Software provides dual-protocol real-time streaming:
 ## 1. WebSocket Protocol & Handshake
 
 ### Connection Endpoint
-```
+
+```text
 ws://<AEGIS_HOST>:8000/api/v1/ws?client=web&client_key=<AEGIS_WEB_CLIENT_KEY>
 ```
 
 ### Initial Server Welcome Packet
+
 ```json
 {
   "event": "CONNECTED",
@@ -26,7 +29,9 @@ ws://<AEGIS_HOST>:8000/api/v1/ws?client=web&client_key=<AEGIS_WEB_CLIENT_KEY>
 ```
 
 ### Channel Subscriptions
+
 Clients can dynamically filter which events they receive:
+
 ```json
 // Client -> Server: Subscribe to Community Reports
 {
@@ -45,7 +50,9 @@ Clients can dynamically filter which events they receive:
 ## 2. Event Types & Schemas
 
 ### `REPORT_CREATED`
+
 Broadcasted immediately when a new community report is submitted:
+
 ```json
 {
   "event": "REPORT_CREATED",
@@ -75,7 +82,9 @@ Broadcasted immediately when a new community report is submitted:
 ```
 
 ### `REPORT_UPDATED` / `REPORT_VERIFIED`
+
 Broadcasted when community upvoting elevates trust score or a moderator updates status:
+
 ```json
 {
   "event": "REPORT_VERIFIED",
@@ -94,12 +103,15 @@ Broadcasted when community upvoting elevates trust score or a moderator updates 
 ```
 
 ### `HAZARD_CREATED` / `HAZARD_UPDATED`
+
 Broadcasted when automated provider ingestion (USGS, Open-Meteo, NASA FIRMS, IMD, CWC) detects new seismic, thermal, cyclone, or hydrological anomalies.
 
 ### `SOS_CREATED`
+
 Broadcasted when an emergency SOS distress beacon is dispatched from Aegis App (PII strictly redacted for public subscribers).
 
 ---
 
 ## 3. Privacy & PII Sanitization
+
 The `EventBroker` automatically scrubs private caller phone numbers, emails, user IDs, and password hashes before broadcasting event packets across public WebSocket and SSE channels.

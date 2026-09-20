@@ -1,129 +1,81 @@
 import { CitizenReport, ReportMediaItem, ReportHazardType, ReportSeverity, ReportStatus } from '../types/report';
+import { ApiClient } from './apiClient';
 
-const STORAGE_KEY = 'aegis_citizen_reports';
-
-export const INITIAL_DEMO_REPORTS: CitizenReport[] = [
-  {
-    id: 'AEGIS-REP-849102',
-    hazardType: 'flood',
-    hazardLabel: 'Urban Flooding',
-    location: {
-      lat: 17.4483,
-      lng: 78.3915,
-      address: 'Madhapur Main Road near Cyber Towers Underpass',
-      city: 'Hyderabad',
-      state: 'Telangana',
-      pincode: '500081',
-    },
-    media: [
-      {
-        id: 'med-101',
-        mediaReference: 's3://aegis-media-vault/2026/09/rep-849102-1.jpg',
-        url: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=600&q=80',
-        fileType: 'image/jpeg',
-        fileSize: 1420500,
-        fileName: 'underpass_waterlogging.jpg',
-        uploadedAt: '18 mins ago',
-      },
-    ],
-    description: 'Underpass completely submerged with 3.5 feet of rushing storm runoff. Multiple four-wheelers stalled in water.',
-    severity: 'high',
-    optionalDetails: {
-      peopleAffectedEstimate: '20-50',
-      isRoadBlocked: true,
-      isImmediateDanger: true,
-    },
-    reporter: {
-      name: 'Priya Reddy',
-      isAnonymous: false,
-    },
-    timestamp: 'Today, 02:45 PM IST',
-    status: 'verified',
-    verificationNotes: 'GHMC Disaster Response Force deployed 2 dewatering suction pumps.',
-  },
-  {
-    id: 'AEGIS-REP-731945',
-    hazardType: 'road_blockage',
-    hazardLabel: 'Fallen Tree & Grid Line',
-    location: {
-      lat: 19.0760,
-      lng: 72.8777,
-      address: 'SVT Road, Bandra West',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400050',
-    },
-    media: [
-      {
-        id: 'med-102',
-        mediaReference: 's3://aegis-media-vault/2026/09/rep-731945-1.jpg',
-        url: 'https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=600&q=80',
-        fileType: 'image/jpeg',
-        fileSize: 2104000,
-        fileName: 'fallen_tree.jpg',
-        uploadedAt: '1 hour ago',
-      },
-    ],
-    description: 'Centuries-old banyan tree uprooted across dual carriageway during gale winds, snapping domestic power wires.',
-    severity: 'medium',
-    optionalDetails: {
-      peopleAffectedEstimate: '5-20',
-      isRoadBlocked: 'partial',
-      isImmediateDanger: false,
-    },
-    reporter: {
-      isAnonymous: true,
-    },
-    timestamp: 'Today, 01:20 PM IST',
-    status: 'dispatched',
-    verificationNotes: 'Brihanmumbai Municipal Corporation tree-clearing crew on site.',
-  },
-  {
-    id: 'AEGIS-REP-610283',
-    hazardType: 'landslide',
-    hazardLabel: 'Mudslide Debris',
-    location: {
-      lat: 30.7333,
-      lng: 78.4333,
-      address: 'NH-108 Milepost 42, near Dharasu Bend',
-      city: 'Uttarkashi',
-      state: 'Uttarakhand',
-      pincode: '249193',
-    },
-    media: [
-      {
-        id: 'med-103',
-        mediaReference: 's3://aegis-media-vault/2026/09/rep-610283-1.jpg',
-        url: 'https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?auto=format&fit=crop&w=600&q=80',
-        fileType: 'image/jpeg',
-        fileSize: 3180000,
-        fileName: 'mudslide_debris.jpg',
-        uploadedAt: '3 hours ago',
-      },
-    ],
-    description: 'Hillside rockfall and wet mud debris blocking single-lane mountain highway. Traffic halted on both sides.',
-    severity: 'critical',
-    optionalDetails: {
-      peopleAffectedEstimate: '50+',
-      isRoadBlocked: true,
-      isImmediateDanger: true,
-    },
-    reporter: {
-      name: 'Rohan Joshi',
-      isAnonymous: false,
-    },
-    timestamp: 'Today, 11:30 AM IST',
-    status: 'pending_review',
-    verificationNotes: 'Border Roads Organisation (BRO) bulldozers en route.',
-  },
-];
+const STORAGE_KEY = 'aegis_cached_citizen_reports';
 
 export class ReportService {
+  private static cachedReports: CitizenReport[] = [];
+  private static listeners: Array<(reports: CitizenReport[]) => void> = [];
+
+  private static mapBackendToCitizenReport(r: any): CitizenReport {
+    const rawHazard = (r.hazard_type || r.category || 'other').toLowerCase();
+    let mappedHazard: ReportHazardType = 'other';
+    if (rawHazard.includes('flood') || rawHazard.includes('waterlog')) mappedHazard = 'flood';
+    else if (rawHazard.includes('fire')) mappedHazard = 'fire';
+    else if (rawHazard.includes('earthquake')) mappedHazard = 'earthquake';
+    else if (rawHazard.includes('cyclone') || rawHazard.includes('storm')) mappedHazard = 'cyclone';
+    else if (rawHazard.includes('landslide')) mappedHazard = 'landslide';
+    else if (rawHazard.includes('road') || rawHazard.includes('tree') || rawHazard.includes('blocked')) mappedHazard = 'road_blockage';
+    else if (rawHazard.includes('rain')) mappedHazard = 'heavy_rainfall';
+    else if (rawHazard.includes('lightning')) mappedHazard = 'lightning';
+
+    const rawSev = (r.severity || 'moderate').toLowerCase();
+    let mappedSeverity: ReportSeverity = 'medium';
+    if (rawSev === 'critical' || rawSev === 'extreme') mappedSeverity = 'critical';
+    else if (rawSev === 'high' || rawSev === 'warning') mappedSeverity = 'high';
+    else if (rawSev === 'low' || rawSev === 'minor') mappedSeverity = 'low';
+
+    const rawStatus = (r.status || 'active').toLowerCase();
+    let mappedStatus: ReportStatus = 'pending_review';
+    if (rawStatus === 'verified' || r.is_verified) mappedStatus = 'verified';
+    else if (rawStatus === 'dispatched') mappedStatus = 'dispatched';
+    else if (rawStatus === 'resolved') mappedStatus = 'resolved';
+
+    const mediaUrls: string[] = Array.isArray(r.media_urls) ? r.media_urls : [];
+    const mediaItems: ReportMediaItem[] = mediaUrls.map((url: string, idx: number) => ({
+      id: `med-${r.id}-${idx}`,
+      mediaReference: url,
+      url,
+      fileType: url.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg',
+      fileSize: 1024 * 1024,
+      fileName: url.split('/').pop() || 'media.jpg',
+      uploadedAt: r.created_at || 'Recently',
+    }));
+
+    return {
+      id: r.id,
+      hazardType: mappedHazard,
+      hazardLabel: r.title || `${mappedHazard.replace('_', ' ').toUpperCase()} Incident`,
+      location: {
+        lat: Number(r.latitude) || 0,
+        lng: Number(r.longitude) || 0,
+        address: r.location_name || `${r.city || 'Local Area'}, ${r.state || 'India'}`,
+        city: r.city || '',
+        state: r.state || 'India',
+        pincode: '',
+      },
+      media: mediaItems,
+      description: r.description || '',
+      severity: mappedSeverity,
+      optionalDetails: {
+        peopleAffectedEstimate: '5-20',
+        isRoadBlocked: mappedHazard === 'road_blockage' || mappedHazard === 'landslide',
+        isImmediateDanger: mappedSeverity === 'critical',
+      },
+      reporter: {
+        name: r.reporter_name || 'Citizen Observer',
+        isAnonymous: !r.reporter_name || r.reporter_name === 'Citizen Observer',
+      },
+      timestamp: r.created_at ? new Date(r.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Just now',
+      status: mappedStatus,
+      verificationNotes: r.verification_status || 'Community Submission',
+    };
+  }
+
   /**
-   * Mock Object Storage abstraction for media uploads (e.g. S3 / GCS / Cloudflare R2)
+   * Upload media item to backend object storage vault
    */
   public static async uploadMediaToObjectStorage(file: File): Promise<ReportMediaItem> {
-    // Validate file type
     const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
     const validVideoTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
     const isImage = validImageTypes.includes(file.type);
@@ -133,19 +85,12 @@ export class ReportService {
       throw new Error(`Unsupported media format: ${file.type}. Please upload JPG, PNG, or MP4.`);
     }
 
-    // Check size limits (Image <= 15MB, Video <= 50MB)
     const maxSizeBytes = isVideo ? 50 * 1024 * 1024 : 15 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       throw new Error(`File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds maximum limit (${isVideo ? '50MB' : '15MB'}).`);
     }
 
-    // Simulate async network upload to object storage bucket
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    const mediaId = `med-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const objectStorageKey = `s3://aegis-media-vault/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${mediaId}-${file.name.replace(/\s+/g, '_')}`;
-
-    // Read preview URL
+    // Convert to base64 for local preview or server upload
     let previewUrl = '';
     if (typeof FileReader !== 'undefined') {
       previewUrl = await new Promise<string>((resolve) => {
@@ -153,15 +98,36 @@ export class ReportService {
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(file);
       });
-    } else if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
-      previewUrl = URL.createObjectURL(file);
-    } else {
-      previewUrl = `blob:https://aegis.gov.in/${mediaId}`;
     }
 
+    // Try backend upload
+    try {
+      const uploadResp = await ApiClient.post<{ mediaUrl: string; fileId: string }>('/reports/media/upload', {
+        fileName: file.name,
+        fileType: file.type,
+        fileSizeBytes: file.size,
+        base64Content: previewUrl,
+      });
+
+      if (uploadResp?.mediaUrl) {
+        return {
+          id: uploadResp.fileId || `med-${Date.now()}`,
+          mediaReference: uploadResp.mediaUrl,
+          url: previewUrl || uploadResp.mediaUrl,
+          fileType: file.type,
+          fileSize: file.size,
+          fileName: file.name,
+          uploadedAt: 'Just now',
+        };
+      }
+    } catch {
+      // fallback to preview url
+    }
+
+    const mediaId = `med-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     return {
       id: mediaId,
-      mediaReference: objectStorageKey,
+      mediaReference: `aegis-storage://incidents/${mediaId}-${file.name.replace(/\s+/g, '_')}`,
       url: previewUrl,
       fileType: file.type,
       fileSize: file.size,
@@ -171,12 +137,11 @@ export class ReportService {
   }
 
   /**
-   * POST /api/reports API endpoint simulation
+   * Submit citizen incident report to the central PostgreSQL database
    */
   public static async submitReport(
     payload: Omit<CitizenReport, 'id' | 'timestamp' | 'status'>
   ): Promise<CitizenReport> {
-    // Server-side validation
     if (!payload.hazardType) {
       throw new Error('Hazard type is required.');
     }
@@ -190,56 +155,110 @@ export class ReportService {
       throw new Error('Severity classification is required.');
     }
 
-    // Simulate backend network latency
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const reportId = `AEGIS-REP-${Math.floor(100000 + Math.random() * 900000)}`;
-    const now = new Date();
-    const timestamp = `Today, ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST`;
-
-    const newReport: CitizenReport = {
-      ...payload,
-      id: reportId,
-      timestamp,
-      status: 'pending_review',
+    const backendPayload = {
+      category: payload.hazardType.toUpperCase(),
+      hazard_type: payload.hazardType.toUpperCase(),
+      title: payload.hazardLabel || `${payload.hazardType} incident reported`,
+      description: payload.description,
+      severity: payload.severity.toUpperCase(),
+      latitude: payload.location.lat,
+      longitude: payload.location.lng,
+      accuracy_meters: 10.0,
+      location_name: payload.location.address,
+      city: payload.location.city || '',
+      state: payload.location.state || 'India',
+      country: 'India',
+      media_urls: payload.media ? payload.media.map((m) => m.url || m.mediaReference) : [],
+      reporter_name: payload.reporter.isAnonymous ? 'Citizen Observer' : (payload.reporter.name || 'Citizen Observer'),
+      idempotency_key: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     };
 
-    // Persist report in LocalStorage
-    const existing = this.getAllReports();
-    const updated = [newReport, ...existing];
     try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      const resp = await ApiClient.post<any>('/reports', backendPayload);
+      if (resp) {
+        const mapped = this.mapBackendToCitizenReport(resp);
+        this.cachedReports.unshift(mapped);
+        this.saveToStorage();
+        this.notifyListeners();
+        return mapped;
       }
-    } catch (e) {
-      console.warn('[ReportService] Failed to save to localStorage:', e);
+    } catch (err) {
+      console.warn('[ReportService] Backend submit error:', err);
     }
 
+    // Local state fallback if backend temporarily unreachable
+    const fallbackId = `AEGIS-REP-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newReport: CitizenReport = {
+      ...payload,
+      id: fallbackId,
+      timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      status: 'pending_review',
+    };
+    this.cachedReports.unshift(newReport);
+    this.saveToStorage();
+    this.notifyListeners();
     return newReport;
   }
 
   /**
-   * Get all citizen reports
+   * Fetch all citizen reports from PostgreSQL backend
    */
-  public static getAllReports(): CitizenReport[] {
+  public static async fetchAllReports(): Promise<CitizenReport[]> {
     try {
-      if (typeof localStorage !== 'undefined') {
-        const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('agies_citizen_reports');
-        if (stored) {
-          return JSON.parse(stored);
-        }
+      const rows = await ApiClient.get<any[]>('/reports', { limit: 50 });
+      if (rows && Array.isArray(rows)) {
+        const mapped = rows.map((r) => this.mapBackendToCitizenReport(r));
+        this.cachedReports = mapped;
+        this.saveToStorage();
+        this.notifyListeners();
+        return mapped;
       }
-    } catch {
-      // fallback
+    } catch (err) {
+      console.warn('[ReportService] fetchAllReports error:', err);
     }
-    return INITIAL_DEMO_REPORTS;
+    return this.getAllReports();
   }
 
   /**
-   * Retrieve report by ID
+   * Synchronous cached getter
    */
+  public static getAllReports(): CitizenReport[] {
+    if (this.cachedReports.length > 0) {
+      return [...this.cachedReports];
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          this.cachedReports = JSON.parse(stored);
+          return [...this.cachedReports];
+        }
+      }
+    } catch {}
+    return [];
+  }
+
   public static getReportById(id: string): CitizenReport | undefined {
-    const all = this.getAllReports();
-    return all.find((r) => r.id === id);
+    return this.getAllReports().find((r) => r.id === id);
+  }
+
+  private static saveToStorage() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.cachedReports));
+      }
+    } catch {}
+  }
+
+  public static subscribe(listener: (reports: CitizenReport[]) => void): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private static notifyListeners() {
+    const clone = [...this.cachedReports];
+    this.listeners.forEach((l) => l(clone));
   }
 }

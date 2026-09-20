@@ -1,6 +1,5 @@
 import { HazardItem, HazardCategory, HazardSeverity, HazardNature, HazardStatus } from '../types/hazard';
-import { DEMO_HAZARDS } from '../data/demoHazards';
-import { DEMO_STATES } from '../data/demoStates';
+import { ApiClient } from './apiClient';
 import { CITY_COORDINATES } from './weatherService';
 
 export interface HazardFilterOptions {
@@ -14,18 +13,83 @@ export interface HazardFilterOptions {
 }
 
 export class HazardService {
-  private static hazards: HazardItem[] = [...DEMO_HAZARDS];
+  private static hazards: HazardItem[] = [];
   private static isInitialized = false;
   private static listeners: Array<() => void> = [];
 
   /**
-   * Initializes and polls authentic live natural hazards from USGS Seismology & Open-Meteo Real Data
+   * Initializes and polls authentic live natural hazards from AEGIS Unified Backend + USGS & Open-Meteo
    */
   public static async fetchLiveHazards(): Promise<HazardItem[]> {
     try {
       const liveList: HazardItem[] = [];
 
-      // 1. Fetch Real Live USGS Earthquakes (2.5+ Magnitude)
+      // 1. Fetch official hazards from AEGIS Unified Backend
+      try {
+        const backendHazards = await ApiClient.get<any[]>('/hazards');
+        if (backendHazards && Array.isArray(backendHazards)) {
+          for (const b of backendHazards) {
+            const loc = b.location || {};
+            const lat = loc.latitude || b.latitude || 20.5937;
+            const lng = loc.longitude || b.longitude || 78.9629;
+            const stateName = loc.state_name || b.state_name || 'India';
+            const districtName = loc.district_name || b.district_name || loc.city_name || 'Regional Grid';
+            const cat = (b.hazard_type || 'WEATHER').toLowerCase();
+            const sev = (b.severity || 'moderate').toLowerCase() as HazardSeverity;
+
+            liveList.push({
+              id: b.id || `BACKEND-HAZ-${Math.random().toString(36).substring(2, 8)}`,
+              title: `${b.hazard_type || 'Hazard'} Alert — ${districtName}, ${stateName}`,
+              category: (cat === 'earthquake' || cat === 'cyclone' || cat === 'flood' || cat === 'heatwave' ? cat : 'heavy_rain') as HazardCategory,
+              categoryName: `${b.hazard_type || 'Hazard'} Monitoring`,
+              isHumanMade: false,
+              nature: 'warning',
+              severity: sev,
+              status: 'active',
+              headline: `Official telemetry detected ${b.hazard_type || 'hazard'} conditions in ${districtName}.`,
+              description: `Real-time unified observation record from ${b.source_authority || 'AEGIS Observation Network'}.`,
+              location: {
+                state: stateName,
+                district: districtName,
+                city: loc.city_name || districtName,
+                coordinates: [lat, lng],
+                radiusKm: 50,
+                affectedZones: [districtName, stateName],
+              },
+              source: {
+                agency: b.source_authority || 'AEGIS Monitoring Grid',
+                bulletinId: b.source_record_id || `AEGIS-${b.id || 'OBS'}`,
+                publishedAt: b.observed_at ? new Date(b.observed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live',
+                validUntil: 'Active Surveillance',
+              },
+              metrics: b.measurements || {},
+              timeline: [
+                {
+                  time: 'Live',
+                  stage: 'Risk Detected',
+                  description: `Observation registered with confidence ${(b.confidence || 1.0) * 100}%.`,
+                  source: b.source_authority || 'AEGIS Core',
+                },
+              ],
+              safetyAdvice: [
+                {
+                  title: 'Follow State Disaster Management Guidelines',
+                  instruction: 'Stay tuned to official emergency broadcasts and adhere to evacuation advisories.',
+                  urgent: sev === 'critical',
+                },
+              ],
+              emergencyContacts: [
+                { name: 'National Emergency Helpline', phone: '112' },
+                { name: 'NDRF Control Room', phone: '1078' },
+              ],
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[HazardService] Backend hazards fetch error:', err);
+      }
+
+      // 2. Fetch Real Live USGS Earthquakes (2.5+ Magnitude) within Indian Territory
       try {
         const usgsRes = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson', {
           headers: { Accept: 'application/json' },
@@ -45,7 +109,7 @@ export class HazardService {
 
             // Restrict strictly to India sovereign territory & territorial waters (6°N-37.5°N, 68°E-97.5°E)
             const isInIndia = lat >= 6.0 && lat <= 37.5 && lng >= 68.0 && lng <= 97.5;
-            if (!isInIndia) continue; // Do not display non-Indian foreign events
+            if (!isInIndia) continue;
 
             let severity: HazardSeverity = 'moderate';
             if (mag >= 6.0) severity = 'critical';
@@ -118,7 +182,7 @@ export class HazardService {
         console.warn('[HazardService] USGS Earthquake feed error:', err);
       }
 
-      // 2. Fetch Live Open-Meteo Meteorological Hazards across Key Indian Metros
+      // 3. Fetch Live Open-Meteo Meteorological Hazards across Key Indian Metros
       try {
         const cities = Object.keys(CITY_COORDINATES);
         for (const cKey of cities) {
@@ -134,7 +198,7 @@ export class HazardService {
           const gust = Math.round(curr.wind_gusts_10m || wind * 1.3);
           const precip = Number(curr.precipitation || 0);
 
-          // Heatwave Hazard
+          // Heatwave Hazard (Real threshold: >= 38°C)
           if (temp >= 38) {
             liveList.push({
               id: `LIVE-HEAT-${cKey.toUpperCase()}`,
@@ -188,7 +252,7 @@ export class HazardService {
             });
           }
 
-          // Rainfall / Inundation Hazard
+          // Rainfall / Inundation Hazard (Real threshold: >= 10mm)
           if (precip >= 10) {
             liveList.push({
               id: `LIVE-RAIN-${cKey.toUpperCase()}`,
@@ -241,7 +305,7 @@ export class HazardService {
             });
           }
 
-          // High Wind / Gale Warning
+          // High Wind / Gale Warning (Real threshold: >= 35 km/h)
           if (wind >= 35 || gust >= 50) {
             liveList.push({
               id: `LIVE-WIND-${cKey.toUpperCase()}`,
@@ -297,18 +361,23 @@ export class HazardService {
         console.warn('[HazardService] Weather hazard generation error:', err);
       }
 
-      // If we obtained live real hazards, update the primary list with real events first
-      if (liveList.length > 0) {
-        const existingReal = this.hazards.filter((h) => !h.id.startsWith('LIVE-'));
-        this.hazards = [...liveList, ...existingReal];
-        this.notifyListeners();
-      }
-
+      this.hazards = liveList;
       this.isInitialized = true;
+      this.notifyListeners();
       return this.hazards;
     } catch (err) {
       console.warn('[HazardService] Overall fetchLiveHazards failure:', err);
       return this.hazards;
+    }
+  }
+
+  public static async fetchNearbyHazards(lat: number, lng: number, radiusKm: number = 50): Promise<any[]> {
+    try {
+      const data = await ApiClient.get<any[]>('/hazards/nearby', { lat, lng, radius_km: radiusKm });
+      return data || [];
+    } catch (err) {
+      console.warn('[HazardService] fetchNearbyHazards error:', err);
+      return [];
     }
   }
 
@@ -361,8 +430,9 @@ export class HazardService {
       }
 
       if (options.stateId && options.stateId !== 'all') {
-        const stateObj = DEMO_STATES.find((s) => s.id === options.stateId || s.name.toLowerCase() === options.stateId?.toLowerCase());
-        if (stateObj && !item.location.state.toLowerCase().includes(stateObj.name.toLowerCase())) {
+        const matchState = item.location.state.toLowerCase().includes(options.stateId.toLowerCase()) ||
+          options.stateId.toLowerCase().includes(item.location.state.toLowerCase());
+        if (!matchState) {
           return false;
         }
       }

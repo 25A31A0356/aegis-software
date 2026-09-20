@@ -305,81 +305,46 @@ export const IndiaSafetyMap: React.FC<IndiaSafetyMapProps> = ({
           userLocation={userLocation}
         />
 
-        {/* 1. Doppler Weather Radar Simulated Heat Layer */}
+        {/* 1. Doppler Weather Radar & Active Severe Convective Zones */}
         {layers.weatherRadar && (
           <>
-            {/* Bay of Bengal / Odisha Heavy Convective Core */}
-            <Circle
-              center={[19.6, 85.8]}
-              radius={180000}
-              pathOptions={{
-                color: '#DC2626',
-                fillColor: '#DC2626',
-                fillOpacity: 0.28,
-                weight: 2,
-                dashArray: '4, 4',
-              }}
-            />
-            <Circle
-              center={[19.6, 85.8]}
-              radius={90000}
-              pathOptions={{
-                color: '#EF4444',
-                fillColor: '#EF4444',
-                fillOpacity: 0.42,
-                weight: 1,
-              }}
-            />
-
-            {/* Telangana / Hyderabad Thunderstorm Radar Core */}
-            <Circle
-              center={[17.4, 78.5]}
-              radius={75000}
-              pathOptions={{
-                color: '#D97706',
-                fillColor: '#F59E0B',
-                fillOpacity: 0.32,
-                weight: 1.5,
-              }}
-            />
-
-            {/* Assam Brahmaputra Downpour Zone */}
-            <Circle
-              center={[26.8, 93.5]}
-              radius={120000}
-              pathOptions={{
-                color: '#DC2626',
-                fillColor: '#DC2626',
-                fillOpacity: 0.25,
-                weight: 1.5,
-              }}
-            />
+            {hazards
+              .filter((h) => h.category === 'flood' || h.category === 'thunderstorm' || h.category === 'cyclone')
+              .map((h) => (
+                <Circle
+                  key={`radar-${h.id}`}
+                  center={h.location.coordinates}
+                  radius={(h.location.radiusKm || 40) * 1000}
+                  pathOptions={{
+                    color: h.severity === 'critical' ? '#DC2626' : '#D97706',
+                    fillColor: h.severity === 'critical' ? '#EF4444' : '#F59E0B',
+                    fillOpacity: 0.25,
+                    weight: 1.5,
+                  }}
+                />
+              ))}
           </>
         )}
 
-        {/* 2. Cyclone Projected Track & Wind Swell Cone */}
+        {/* 2. Active Severe Cyclone Impact Zones */}
         {layers.cycloneTrack && (
           <>
-            <Polyline
-              positions={cycloneTrackCoords}
-              pathOptions={{
-                color: '#DC2626',
-                weight: 4,
-                dashArray: '6, 6',
-                lineCap: 'round',
-              }}
-            />
-            {/* Cone of Uncertainty */}
-            <Circle
-              center={[20.5, 85.5]}
-              radius={135000}
-              pathOptions={{
-                color: '#D97706',
-                fillColor: '#FEF08A',
-                fillOpacity: 0.2,
-                weight: 1,
-              }}
-            />
+            {hazards
+              .filter((h) => h.category === 'cyclone')
+              .map((h) => (
+                <Circle
+                  key={`cyclone-${h.id}`}
+                  center={h.location.coordinates}
+                  radius={(h.location.radiusKm || 60) * 1000}
+                  pathOptions={{
+                    color: '#DC2626',
+                    fillColor: '#FEF08A',
+                    fillOpacity: 0.2,
+                    weight: 2,
+                    dashArray: '4, 4',
+                  }}
+                />
+              ))}
           </>
         )}
 

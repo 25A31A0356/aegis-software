@@ -10,6 +10,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ## 1. Provider Configuration Checklist
 
 ### [1] Weather & Meteorological Telemetry
+
 - **Provider**: Open-Meteo Global NWP & IMD Telemetry Network
 - **Purpose**: Real-time atmospheric conditions (temperature, apparent temp, relative humidity, barometric pressure, wind speed, wind direction, rainfall, UV index, cloud cover, visibility) and multi-day hourly forecast models.
 - **Required key**: None for open tier (Optional commercial API key for high-throughput enterprise tiers).
@@ -23,6 +24,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ---
 
 ### [2] Seismic & Earthquake Monitoring
+
 - **Provider**: USGS Earthquake Hazards Program & National Seismology Grid
 - **Purpose**: Global real-time seismic monitoring, earthquake epicenter coordinates, magnitude, focal depth, event timestamps, and tsunami potential flags.
 - **Required key**: None (Public USGS Real-Time GeoJSON Feed).
@@ -36,6 +38,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ---
 
 ### [3] Satellite Thermal Wildfire & Hotspot Detection
+
 - **Provider**: NASA FIRMS (Fire Information for Resource Management System)
 - **Purpose**: Near real-time active fire and thermal anomaly detection via VIIRS (SNPP & NOAA-20/21) and MODIS (Terra & Aqua) satellites.
 - **Required key**: NASA FIRMS MAP_KEY (Free 32-character token from earthdata.nasa.gov).
@@ -49,6 +52,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ---
 
 ### [4] Cyclones & Severe Storm Warnings
+
 - **Provider**: India Meteorological Department (IMD) / National Open Data Portal (Data.gov.in)
 - **Purpose**: Tropical cyclone tracking, central barometric pressure, sustained maximum wind speeds, track cones of uncertainty, and severe storm bulletins.
 - **Required key**: Data.gov.in API Key / IMD Cyclone Warning Division Token.
@@ -62,6 +66,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ---
 
 ### [5] River Basin & Flood Hydrology
+
 - **Provider**: Central Water Commission (CWC India) & National Water Informatics Center
 - **Purpose**: River gauge stages, water levels (meters), warning levels, danger levels, discharge (cumecs), and flood rising/falling trends.
 - **Required key**: CWC / National Hydrology Project Access Token.
@@ -75,6 +80,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ---
 
 ### [6] Tsunami & Coastal Marine Hazards
+
 - **Provider**: INCOIS (Indian National Centre for Ocean Information Services)
 - **Purpose**: Coastal tsunami warnings, significant wave heights, swell surge, storm surge alerts, and sea surface temperatures.
 - **Required key**: INCOIS Web Service Token / Open OGC WFS endpoint.
@@ -88,6 +94,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ---
 
 ### [7] National Air Quality Index (AQI)
+
 - **Provider**: Central Pollution Control Board (CPCB) / Open-Meteo Air Quality Grid
 - **Purpose**: Continuous ambient air quality monitoring (PM2.5, PM10, NO2, SO2, CO, Ozone, and composite AQI).
 - **Required key**: Data.gov.in CPCB Token (or Open-Meteo AQ Open Access).
@@ -101,6 +108,7 @@ This document details the configuration, credentials, rate limits, and fallback 
 ---
 
 ### [8] Geographic & Administrative Boundary Engine
+
 - **Provider**: Open-Meteo Geocoding API & AEGIS National Centroid Registry
 - **Purpose**: Forward geocoding, reverse geocoding, locality resolution, district/state administrative boundaries, elevation, and timezones.
 - **Required key**: None (Open Access + Built-in Offline Centroid Registry).
@@ -139,6 +147,7 @@ flowchart TD
 When an external provider is polled or registered via the Admin Console, the **Heuristic Field Detector** parses sample records and infers standard mappings:
 
 ### Semantic Field Matching Patterns
+
 - **Temperature**: `r"(temp|temperature|temp_c|temp_f|t2m|air_temp|dry_bulb)"` $\to$ `temperature_c`
 - **Wind Speed**: `r"(wind_speed|wind_spd|wind_velocity|wspd|wind_kph|wind_mph|wind_ms)"` $\to$ `wind_speed_kmh`
 - **Precipitation**: `r"(precip|precipitation|rain|rainfall|rain_mm|rain_in|prcp)"` $\to$ `precipitation_mm`
@@ -149,7 +158,9 @@ When an external provider is polled or registered via the Admin Console, the **H
 - **Thermal Fire Power**: `r"(frp|fire_power|fire_radiative_power|thermal_mw)"` $\to$ `fire_radiative_power`
 
 ### Physical Unit Conversions Applied
+
 All metrics are stored internally in standard SI / scientific units:
+
 - **Temperature**: Fahrenheit $\to$ Celsius ($T_C = (T_F - 32) \times \frac{5}{9}$); Kelvin $\to$ Celsius ($T_C = T_K - 273.15$)
 - **Speed**: Miles/hour $\to$ km/h ($v_{kmh} = v_{mph} \times 1.60934$); Knots $\to$ km/h ($v_{kmh} = v_{kts} \times 1.852$)
 - **Precipitation**: Inches $\to$ mm ($P_{mm} = P_{in} \times 25.4$)

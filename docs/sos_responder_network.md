@@ -35,6 +35,7 @@ stateDiagram-v2
 ```
 
 ### State Definitions
+
 1. **`PENDING`**: Distress signal registered, family contacts alerted.
 2. **`MATCHING`**: Geospatial discovery engine searching for available opted-in responders.
 3. **`OFFERED`**: Push notifications & WebSocket offers dispatched to qualified candidates.
@@ -75,9 +76,12 @@ stateDiagram-v2
 ## 4. REST API Reference
 
 ### 4.1 Trigger Distress Signal
+
 **`POST /api/v1/sos`**
+
 - **Auth**: Public or Bearer JWT (Optional user ID)
 - **Request Body**:
+
 ```json
 {
   "latitude": 19.0760,
@@ -94,7 +98,9 @@ stateDiagram-v2
   "anonymous": false
 }
 ```
+
 - **Response**:
+
 ```json
 {
   "success": true,
@@ -110,19 +116,32 @@ stateDiagram-v2
 }
 ```
 
+---
+
 ### 4.2 Query Nearby SOS Incidents (Responder View)
+
 **`GET /api/v1/sos/nearby?lat=19.0760&lng=72.8777&radius_km=10.0`**
+
 - **Auth**: Bearer JWT (Recommended for opted-in responders)
 - **Response**: List of active incidents within radius. For unaccepted incidents, exact coordinates are obfuscated to coarse centroid for privacy.
 
+---
+
 ### 4.3 Get Detailed SOS Status
+
 **`GET /api/v1/sos/{sos_id}`**
+
 - **Response**: Full incident status, current responder assignment (if accepted), route ETA, and latest breadcrumbs.
 
+---
+
 ### 4.4 Accept Responder Offer (Atomic)
+
 **`POST /api/v1/sos/{sos_id}/accept`**
+
 - **Auth**: Bearer JWT or Request Body
 - **Request Body**:
+
 ```json
 {
   "responder_id": "usr_responder_123",
@@ -130,7 +149,9 @@ stateDiagram-v2
   "longitude": 72.8810
 }
 ```
+
 - **Success Response (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -155,7 +176,9 @@ stateDiagram-v2
   }
 }
 ```
+
 - **Race Condition Failure (409 Conflict)**:
+
 ```json
 {
   "success": false,
@@ -167,14 +190,23 @@ stateDiagram-v2
 }
 ```
 
+---
+
 ### 4.5 Decline Responder Offer
+
 **`POST /api/v1/sos/{sos_id}/decline`**
+
 - **Request Body**: `{"responder_id": "usr_responder_123", "reason": "Engaged in another task"}`
 
+---
+
 ### 4.6 Stream High-Frequency Live GPS Breadcrumbs
+
 **`POST /api/v1/sos/{sos_id}/location`** (Requester)  
 **`POST /api/v1/sos/{sos_id}/responder-location`** (Responder)
+
 - **Request Body**:
+
 ```json
 {
   "latitude": 19.0805,
@@ -185,23 +217,41 @@ stateDiagram-v2
   "user_id": "usr_responder_123"
 }
 ```
+
 - **Response**: Updated distance & ETA. If the responder moves > 150m from their last calculated route, the server automatically recalculates turn-by-turn route geometry and pushes a `ROUTE_UPDATED` WebSocket event.
 
+---
+
 ### 4.7 Update Incident Status
+
 **`POST /api/v1/sos/{sos_id}/status`**
+
 - **Request Body**: `{"status": "ON_SITE", "user_id": "usr_responder_123", "notes": "Reached location"}`
 
+---
+
 ### 4.8 Resolve Distress Incident
+
 **`POST /api/v1/sos/{sos_id}/resolve`**
+
 - **Request Body**: `{"resolved_by": "usr_requester", "resolution_notes": "Ambulance arrived and patient assisted."}`
 
+---
+
 ### 4.9 Cancel Distress Incident
+
 **`POST /api/v1/sos/{sos_id}/cancel`**
+
 - **Request Body**: `{"cancelled_by": "usr_requester", "reason": "Accidental trigger, all safe."}`
 
+---
+
 ### 4.10 Responder Opt-In & Availability Profile
+
 **`POST /api/v1/sos/responder/profile`**
+
 - **Request Body**:
+
 ```json
 {
   "is_opted_in": true,
@@ -218,6 +268,7 @@ stateDiagram-v2
 Connect to `ws://localhost:8000/api/v1/ws` or `ws://localhost:8000/api/v1/ws/sos`.
 
 ### Channels & Subscriptions
+
 - **User Channel**: `user:{userId}` — Private alerts, offer dispatches, family notifications.
 - **Incident Channel**: `sos:{sosId}` — Live tracking room for requester, responder, and authorized dispatchers.
 - **Global Channel**: `sos` or `hazards` — Broadcasts for active emergency map overlays.
@@ -225,6 +276,7 @@ Connect to `ws://localhost:8000/api/v1/ws` or `ws://localhost:8000/api/v1/ws/sos
 ### WebSocket Event Types
 
 1. **`SOS_OFFER`** (Sent to candidate responders):
+
 ```json
 {
   "type": "SOS_OFFER",
@@ -236,7 +288,8 @@ Connect to `ws://localhost:8000/api/v1/ws` or `ws://localhost:8000/api/v1/ws/sos
 }
 ```
 
-2. **`SOS_ACCEPTED`** (Sent to requester and candidate channels):
+1. **`SOS_ACCEPTED`** (Sent to requester and candidate channels):
+
 ```json
 {
   "type": "SOS_ACCEPTED",
@@ -248,7 +301,8 @@ Connect to `ws://localhost:8000/api/v1/ws` or `ws://localhost:8000/api/v1/ws/sos
 }
 ```
 
-3. **`LOCATION_UPDATE`** (Live tracking stream):
+1. **`LOCATION_UPDATE`** (Live tracking stream):
+
 ```json
 {
   "type": "LOCATION_UPDATE",
@@ -263,7 +317,8 @@ Connect to `ws://localhost:8000/api/v1/ws` or `ws://localhost:8000/api/v1/ws/sos
 }
 ```
 
-4. **`ROUTE_UPDATED`** (Triggered on >150m deviation):
+1. **`ROUTE_UPDATED`** (Triggered on >150m deviation):
+
 ```json
 {
   "type": "ROUTE_UPDATED",
@@ -277,7 +332,8 @@ Connect to `ws://localhost:8000/api/v1/ws` or `ws://localhost:8000/api/v1/ws/sos
 }
 ```
 
-5. **`SOS_RESOLVED` / `SOS_CANCELLED`**:
+1. **`SOS_RESOLVED` / `SOS_CANCELLED`**:
+
 ```json
 {
   "type": "SOS_RESOLVED",

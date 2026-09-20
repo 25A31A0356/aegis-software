@@ -80,3 +80,9 @@ async def init_db():
             session.add(admin_user)
             await session.commit()
             logger.info(f"Bootstrapped default administrator: {settings.DEFAULT_ADMIN_EMAIL}")
+
+    try:
+        from backend.app.database.seeds import seed_database
+        await seed_database()
+    except Exception as e:
+        logger.warning(f"Seed database skipped or error: {e}")

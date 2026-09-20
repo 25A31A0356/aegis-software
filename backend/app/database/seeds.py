@@ -1,15 +1,17 @@
 """
 AEGIS UNIFIED DATA CORE - Database Baseline Seeding Script
-Bootstraps official data sources, pre-configured field mappings, and verified baseline alerts.
+Bootstraps official data sources, pre-configured field mappings, verified baseline alerts,
+shelters/safe zones, and canonical emergency services directory in PostgreSQL.
 """
 import asyncio
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from backend.app.database.session import async_session_factory
-from backend.app.database.models import DataSource, FieldMapping, AlertRecord
+from backend.app.database.models import DataSource, FieldMapping, AlertRecord, SafeZone, EmergencyServiceEntity
 from backend.app.core.encryption import SecretVault
 from backend.app.core.config import settings
 from backend.app.utils.logger import logger
+from backend.app.api.v1.emergency_services import CANONICAL_NATIONAL_SERVICES
 
 
 DEFAULT_SOURCES = [
@@ -129,7 +131,6 @@ DEFAULT_SOURCES = [
     }
 ]
 
-
 DEFAULT_ALERTS = [
     {
         "alert_code": "ALT-IMD-2026-0891",
@@ -197,9 +198,110 @@ DEFAULT_ALERTS = [
     }
 ]
 
+DEFAULT_SHELTERS = [
+    {
+        "name": "Gopalpur Multi-Purpose Cyclone Shelter (ODRAF Zone 4)",
+        "zone_type": "RELIEF_SHELTER",
+        "latitude": 19.2612,
+        "longitude": 84.8634,
+        "capacity": 2500,
+        "current_occupancy": 320,
+        "address": "Near Marine Police Station, Gopalpur-on-Sea",
+        "city": "Gopalpur",
+        "district": "Ganjam",
+        "state": "Odisha",
+        "contact_phone": "+91 680 2242100",
+        "amenities": ["FOOD", "WATER", "MEDICAL", "SOLAR_BACKUP", "HIGH_ELEVATION"]
+    },
+    {
+        "name": "Puri Jagannath Coastal Evacuation Center",
+        "zone_type": "EVACUATION_CENTER",
+        "latitude": 19.8135,
+        "longitude": 85.8312,
+        "capacity": 3000,
+        "current_occupancy": 450,
+        "address": "VIP Road, Near District Collectorate",
+        "city": "Puri",
+        "district": "Puri",
+        "state": "Odisha",
+        "contact_phone": "+91 6752 222034",
+        "amenities": ["FOOD", "WATER", "POWER", "COMMUNITY_KITCHEN"]
+    },
+    {
+        "name": "Bhadradri Flood Relief Camp & Medical Hub",
+        "zone_type": "RELIEF_SHELTER",
+        "latitude": 17.5500,
+        "longitude": 80.6200,
+        "capacity": 1800,
+        "current_occupancy": 150,
+        "address": "High School Grounds, Temple Road",
+        "city": "Bhadrachalam",
+        "district": "Bhadradri Kothagudem",
+        "state": "Telangana",
+        "contact_phone": "+91 8743 232444",
+        "amenities": ["FOOD", "WATER", "MEDICAL", "BOATS"]
+    },
+    {
+        "name": "Kurla Municipal Relief Shelter & Community Center",
+        "zone_type": "RELIEF_SHELTER",
+        "latitude": 19.0760,
+        "longitude": 72.8777,
+        "capacity": 1200,
+        "current_occupancy": 80,
+        "address": "LBS Marg, Kurla West",
+        "city": "Mumbai",
+        "district": "Mumbai Suburban",
+        "state": "Maharashtra",
+        "contact_phone": "+91 22 26500000",
+        "amenities": ["WATER", "MEDICAL", "DEWATERING_PUMPS"]
+    },
+    {
+        "name": "AIIMS Emergency Trauma & Disaster Medicine Center (Delhi)",
+        "zone_type": "HOSPITAL",
+        "latitude": 28.5672,
+        "longitude": 77.2100,
+        "capacity": 800,
+        "current_occupancy": 610,
+        "address": "Sri Aurobindo Marg, Ansari Nagar",
+        "city": "New Delhi",
+        "district": "South Delhi",
+        "state": "Delhi NCR",
+        "contact_phone": "102 / 011-26588500",
+        "amenities": ["ICU", "TRAUMA_SURGERY", "BLOOD_BANK", "HELIPAD", "OXYGEN"]
+    },
+    {
+        "name": "KEM Hospital Disaster & Emergency Response Wing (Mumbai)",
+        "zone_type": "HOSPITAL",
+        "latitude": 19.0024,
+        "longitude": 72.8427,
+        "capacity": 650,
+        "current_occupancy": 490,
+        "address": "Acharya Donde Marg, Parel",
+        "city": "Mumbai",
+        "district": "Mumbai City",
+        "state": "Maharashtra",
+        "contact_phone": "108 / 022-24107000",
+        "amenities": ["ICU", "TRAUMA_CARE", "BURN_UNIT", "AMBULANCE_BASE"]
+    },
+    {
+        "name": "Gandhi Hospital Critical Care & Emergency Unit (Hyderabad)",
+        "zone_type": "HOSPITAL",
+        "latitude": 17.4239,
+        "longitude": 78.5033,
+        "capacity": 500,
+        "current_occupancy": 380,
+        "address": "Musheerabad, Padmarao Nagar",
+        "city": "Hyderabad",
+        "district": "Hyderabad",
+        "state": "Telangana",
+        "contact_phone": "108 / 040-27505566",
+        "amenities": ["TRAUMA_CARE", "ICU", "BLOOD_BANK", "DISASTER_TRIAGE"]
+    }
+]
+
 
 async def seed_database():
-    """Seeds default providers, field mappings, and verified alerts."""
+    """Seeds default providers, field mappings, verified alerts, shelters, and emergency services."""
     now = datetime.now(timezone.utc)
 
     async with async_session_factory() as session:
@@ -209,7 +311,6 @@ async def seed_database():
             res = await session.execute(stmt)
             existing = res.scalars().first()
             if not existing:
-                # Check if API key is provided via environment settings
                 api_key_val = None
                 p_code = src_data["provider_code"]
                 if p_code == "nasa_firms" and getattr(settings, "NASA_FIRMS_MAP_KEY", None):
@@ -240,16 +341,19 @@ async def seed_database():
                 session.add(source)
                 await session.flush()
 
-                for m in src_data.get("mappings", []):
-                    mapping = FieldMapping(
-                        data_source_id=source.id,
-                        external_field_path=m["external_field_path"],
-                        aegis_field_name=m["aegis_field_name"],
-                        source_unit=m["source_unit"],
-                        target_unit=m["target_unit"],
-                        transformation_rule="direct"
-                    )
-                    session.add(mapping)
+                raw_mappings = src_data.get("mappings")
+                if isinstance(raw_mappings, list):
+                    for m in raw_mappings:
+                        if isinstance(m, dict):
+                            mapping = FieldMapping(
+                                data_source_id=source.id,
+                                external_field_path=str(m.get("external_field_path", "")),
+                                aegis_field_name=str(m.get("aegis_field_name", "")),
+                                source_unit=str(m.get("source_unit", "")),
+                                target_unit=str(m.get("target_unit", "")),
+                                transformation_rule="direct"
+                            )
+                            session.add(mapping)
                 logger.info(f"Seeded default provider: {src_data['name']}")
 
         # 2. Seed Alerts
@@ -278,6 +382,52 @@ async def seed_database():
                 )
                 session.add(alert)
                 logger.info(f"Seeded alert: {a_data['alert_code']}")
+
+        # 3. Seed Shelters & Safe Zones
+        for sh in DEFAULT_SHELTERS:
+            stmt = select(SafeZone).where(SafeZone.name == sh["name"])
+            res = await session.execute(stmt)
+            if not res.scalars().first():
+                sz = SafeZone(
+                    name=sh["name"],
+                    zone_type=sh["zone_type"],
+                    latitude=sh["latitude"],
+                    longitude=sh["longitude"],
+                    capacity=sh["capacity"],
+                    current_occupancy=sh["current_occupancy"],
+                    address=sh["address"],
+                    city=sh["city"],
+                    district=sh["district"],
+                    state=sh["state"],
+                    contact_phone=sh["contact_phone"],
+                    is_active=True,
+                    amenities=sh["amenities"]
+                )
+                session.add(sz)
+                logger.info(f"Seeded safe zone/shelter: {sh['name']}")
+
+        # 4. Seed Canonical Emergency Services Directory
+        for srv in CANONICAL_NATIONAL_SERVICES:
+            stmt = select(EmergencyServiceEntity).where(EmergencyServiceEntity.service_code == srv["service_code"])
+            res = await session.execute(stmt)
+            if not res.scalars().first():
+                entity = EmergencyServiceEntity(
+                    service_code=srv["service_code"],
+                    name=srv["name"],
+                    category=srv["category"],
+                    phone_numbers=srv["phone_numbers"],
+                    alternate_phone=srv.get("alternate_phone", ""),
+                    state=srv.get("state", "All India"),
+                    district=srv.get("district", "All Districts"),
+                    action_types=srv.get("action_types", ["CALL", "SMS"]),
+                    description=srv["description"],
+                    is_automated_dispatch_integrated=srv.get("is_automated_dispatch_integrated", False),
+                    dispatch_endpoint=srv.get("dispatch_endpoint", ""),
+                    is_active=True,
+                    display_priority=srv.get("display_priority", 10)
+                )
+                session.add(entity)
+                logger.info(f"Seeded emergency service: {srv['service_code']}")
 
         await session.commit()
         logger.info("Database seeding completed successfully.")

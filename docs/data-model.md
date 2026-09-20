@@ -4,7 +4,7 @@
 
 The database uses PostgreSQL 16 with the PostGIS extension for spatial index acceleration, along with composite temporal-spatial indexing.
 
-```
+```text
 +----------------------------------------------------------------------------------------------------+
 |                                    DATABASE ENTITY RELATIONSHIPS                                   |
 +----------------------------------------------------------------------------------------------------+
@@ -51,7 +51,9 @@ The database uses PostgreSQL 16 with the PostGIS extension for spatial index acc
 ## 2. Table Schemas & Column Definitions
 
 ### 2.1 `data_sources`
+
 Tracks external telemetry and API endpoints with their configuration and encrypted credentials.
+
 - `id` (`UUID`, PK): Unique source identifier.
 - `name` (`VARCHAR(100)`): Human-readable name (e.g. `IMD Radar Doppler Grid`).
 - `code` (`VARCHAR(50)`, Unique): Unique machine identifier (e.g. `imd_weather`).
@@ -65,7 +67,9 @@ Tracks external telemetry and API endpoints with their configuration and encrypt
 - `total_records_ingested` (`INTEGER`): Cumulative count of processed records.
 
 ### 2.2 `normalized_observations`
+
 Unified, canonical multi-hazard telemetry table.
+
 - `id` (`UUID`, PK): Primary observation key.
 - `source_id` (`UUID`, FK): Originating data source.
 - `hazard_type` (`VARCHAR(30)`): Standardized hazard category.

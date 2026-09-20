@@ -5,6 +5,7 @@ import {
   DEFAULT_EMERGENCY_PROFILE,
   DEFAULT_FAMILY_CONTACTS,
 } from '../types/profile';
+import { ApiClient } from '../services/apiClient';
 
 interface ProfileContextType {
   profile: EmergencyProfile;
@@ -54,9 +55,46 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return 'en';
   });
 
-  const [colorScheme, setColorSchemeState] = useState<'light' | 'dark'>('light');
-  const [notificationsEnabled, setNotificationsEnabledState] = useState<boolean>(true);
-  const [liveLocationEnabled, setLiveLocationEnabledState] = useState<boolean>(true);
+  const [colorScheme, setColorSchemeState] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem(`${PREFS_KEY}_theme`);
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch {}
+    return 'light';
+  });
+
+  const [notificationsEnabled, setNotificationsEnabledState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(`${PREFS_KEY}_notif`);
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return true;
+  });
+
+  const [liveLocationEnabled, setLiveLocationEnabledState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(`${PREFS_KEY}_loc`);
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return true;
+  });
+
+  // Apply dark mode CSS class to root HTML element
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (colorScheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      try {
+        localStorage.setItem(`${PREFS_KEY}_theme`, colorScheme);
+      } catch {}
+    }
+  }, [colorScheme]);
 
   // Sync profile changes to localStorage
   useEffect(() => {
@@ -78,17 +116,37 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const setNotificationsEnabled = (enabled: boolean) => {
     setNotificationsEnabledState(enabled);
+    try {
+      localStorage.setItem(`${PREFS_KEY}_notif`, String(enabled));
+    } catch {}
   };
 
   const setLiveLocationEnabled = (enabled: boolean) => {
     setLiveLocationEnabledState(enabled);
+    try {
+      localStorage.setItem(`${PREFS_KEY}_loc`, String(enabled));
+    } catch {}
   };
 
   const updateProfile = (updates: Partial<EmergencyProfile>) => {
-    setProfile((prev) => ({
-      ...prev,
-      ...updates,
-    }));
+    setProfile((prev) => {
+      const updated = {
+        ...prev,
+        ...updates,
+      };
+      return updated;
+    });
+
+    // Optionally sync with backend if authenticated
+    ApiClient.post('/auth/preferences', {
+      full_name: updates.fullName || profile.fullName,
+      phone: updates.phoneNumber || profile.phoneNumber,
+      blood_group: updates.bloodGroup || profile.bloodGroup,
+      medical_notes: updates.medicalNotes || profile.medicalNotes,
+      household_count: updates.peopleCount || profile.peopleCount,
+    }).catch(() => {
+      // Offline / guest mode fallback
+    });
   };
 
   const addFamilyContact = (contact: Omit<FamilyContact, 'id'>) => {
@@ -125,6 +183,9 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(`${PREFS_KEY}_lang`);
+      localStorage.removeItem(`${PREFS_KEY}_theme`);
+      localStorage.removeItem(`${PREFS_KEY}_notif`);
+      localStorage.removeItem(`${PREFS_KEY}_loc`);
     } catch {}
   };
 

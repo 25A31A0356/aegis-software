@@ -55,12 +55,17 @@ export function aegisBackendPlugin(): Plugin {
             fetchBody = typeof body === 'string' ? body : JSON.stringify(body);
           }
 
-          const fastApiUrl = `http://127.0.0.1:8000${urlStr}`;
+          const backendHost = process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
+          const fastApiUrl = `${backendHost}${urlStr}`;
           const forwardHeaders: Record<string, string> = {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
           };
           if (req.headers['authorization']) {
             forwardHeaders['authorization'] = req.headers['authorization'] as string;
+          }
+          if (req.headers['x-aegis-user-id']) {
+            forwardHeaders['x-aegis-user-id'] = req.headers['x-aegis-user-id'] as string;
           }
 
           const fastApiResp = await fetch(fastApiUrl, {

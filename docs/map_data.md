@@ -7,6 +7,7 @@ Aegis Software serves as the central GIS server for **Aegis Web** (MapLibre / Le
 ## 1. Unified Map Data Endpoint: `GET /api/v1/map-data`
 
 ### Query Parameters
+
 - `layers`: Comma-separated list (`hazards`, `reports`, `sos_beacons`, `shelters`, `road_hazards`, `all`)
 - `bbox`: Spatial bounding box filter in `minLon,minLat,maxLon,maxLat` format (e.g. `68.0,6.0,97.5,37.0`)
 - `lat`, `lon` / `lng`: Center coordinate filter
@@ -14,6 +15,7 @@ Aegis Software serves as the central GIS server for **Aegis Web** (MapLibre / Le
 - `category`: Category filter (`FLOOD`, `EARTHQUAKE`, `FIRE`, `ALL`)
 
 ### Response Format: Standard GeoJSON FeatureCollection
+
 ```json
 {
   "success": true,

@@ -10,16 +10,21 @@ The **AEGIS Central Data Gateway** is the single controlled backend between thir
 ## 1. Security & Authentication Architecture
 
 ### Client Identification Headers
+
 Clients must pass the `X-Aegis-Client` header to identify client platform context:
+
 - `X-Aegis-Client: web` (Aegis Web Dashboard)
 - `X-Aegis-Client: app` (Aegis Alert Mobile Application)
 - `X-Aegis-Client: internal` (Automated Ingestion Workers)
 
 ### Administrative Authentication
+
 Administrative and sensor configuration routes require a Bearer JWT Token in the standard header:
+
 `Authorization: Bearer <JWT_TOKEN>`
 
 ### Zero Client Credential Exposure
+
 - Provider API keys (NASA FIRMS, IMD, CWC, CPCB) exist **strictly on the backend**.
 - Client requests never receive provider tokens, database connection strings, or backend secrets.
 - All errors are sanitized to prevent stack trace or path disclosure.
@@ -66,8 +71,8 @@ Every endpoint returns a unified JSON envelope:
 | `/api/v1/wildfires` | GET | Web / App | Rate Limited | NASA FIRMS VIIRS/MODIS thermal anomalies |
 | `/api/v1/alerts` | GET | Web / App | Rate Limited | Official CAP-CP emergency alerts & instructions |
 | `/api/v1/location` | GET | Web / App | Rate Limited | Combined geocoding and reverse geocoding resolver |
-| `/api/v1/location/search`| GET | Web / App | Rate Limited | Forward geocoding place search |
-| `/api/v1/location/reverse`| GET | Web / App | Rate Limited | Reverse geocode coordinates to district & state |
+| `/api/v1/location/search` | GET | Web / App | Rate Limited | Forward geocoding place search |
+| `/api/v1/location/reverse` | GET | Web / App | Rate Limited | Reverse geocode coordinates to district & state |
 | `/api/v1/mobile/sync` | GET | App (Mobile) | Rate Limited | Single-call low-bandwidth payload for mobile sync |
 | `/api/v1/sos` | POST/GET | Web / App | Rate Limited | Distress trigger & list active SOS emergencies |
 | `/api/v1/sos/nearby` | GET | Web / App | Rate Limited | Geospatial nearby SOS discovery (10km-20km) |
@@ -97,12 +102,15 @@ Every endpoint returns a unified JSON envelope:
 ## 4. Endpoint Specifications & Contracts
 
 ### [A] Real-Time Weather (`GET /api/v1/weather`)
+
 **Parameters**:
+
 - `lat` (float, required, e.g. `19.0760`)
 - `lng` (float, required, e.g. `72.8777`)
 - `city` (string, optional)
 
 **Response Example**:
+
 ```json
 {
   "success": true,
@@ -135,12 +143,15 @@ Every endpoint returns a unified JSON envelope:
 ---
 
 ### [B] Weather Forecast (`GET /api/v1/forecast`)
+
 **Parameters**:
+
 - `lat` (float, default `19.0760`)
 - `lng` (float, default `72.8777`)
 - `days` (int, default `7`, max `16`)
 
 **Response Highlights**:
+
 - `daily`: Array of 7-day high/low temperatures, precipitation sums, rain probability, wind peaks, UV index, weather conditions, sunrise/sunset.
 - `hourly`: Array of 24-hour hourly temperatures, apparent temp, humidity, precipitation probability, and wind speeds.
 - `severe_weather_warning`: Populated if heavy storms, cyclones, or extreme heatwaves are predicted.
@@ -148,7 +159,9 @@ Every endpoint returns a unified JSON envelope:
 ---
 
 ### [C] Nearby Hazards (`GET /api/v1/hazards/nearby`)
+
 **Parameters**:
+
 - `lat` (float, required)
 - `lng` (float, required)
 - `radius_km` (float, default `50.0`)
@@ -156,6 +169,7 @@ Every endpoint returns a unified JSON envelope:
 - `limit` (int, default `30`)
 
 **Response Example**:
+
 ```json
 {
   "success": true,
@@ -194,15 +208,21 @@ Every endpoint returns a unified JSON envelope:
 ---
 
 ### [D] Geographic Location Engine (`GET /api/v1/location`)
+
 **Search Mode**: `GET /api/v1/location/search?query=Bhubaneswar`
+
 - Returns matching cities, districts, states, coordinates, elevation, and timezones.
+
 **Reverse Mode**: `GET /api/v1/location/reverse?lat=20.2961&lng=85.8245`
+
 - Resolves coordinates to district (Khurda), state (Odisha), elevation, and confidence score.
 
 ---
 
 ### [E] Provider & Platform Status (`GET /api/v1/status`)
+
 **Response Highlights**:
+
 - `platform_status`: `OPERATIONAL | DEGRADED | CRITICAL`
 - `active_providers_count`: Number of active provider adapters.
 - `providers`: Array detailing each of the 8 providers (`status`, `last_success`, `last_failure`, `last_update`, `latency_ms`, `error_state`, `fallback_active`).
@@ -212,11 +232,13 @@ Every endpoint returns a unified JSON envelope:
 ## 5. Web & App Integration Contracts
 
 ### Aegis Web Contract
+
 - Web queries `/api/v1/weather`, `/api/v1/forecast`, `/api/v1/hazards`, `/api/v1/hazards/nearby`, `/api/v1/alerts`, `/api/v1/location`, and `/api/v1/status`.
 - Passes `X-Aegis-Client: web`.
 - Displays real-time map overlays, multi-hazard gauges, weather graphs, and emergency bulletins.
 
 ### Aegis Alert Mobile App Contract
+
 - Mobile queries `/api/v1/mobile/sync?lat=...&lon=...&radius_km=50` for single-request low-bandwidth synchronization.
 - Submits distress signals to `POST /api/v1/sos` and reports to `POST /api/v1/reports`.
 - Passes `X-Aegis-Client: app`.
