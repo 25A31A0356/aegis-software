@@ -22,7 +22,9 @@ from backend.app.api.v1.correlation import router as correlation_router
 from backend.app.api.v1.ai import router as ai_router
 from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.admin import router as admin_router
-from backend.app.api.v1.sos import router as sos_router
+from backend.app.api.v1.sos import router as sos_router, create_safe_event, list_safe_events, SafeResponseSchema
+from backend.app.schemas.common import ApiResponse
+from typing import List, Dict, Any
 from backend.app.api.v1.reports import router as reports_router
 from backend.app.api.v1.activity import router as activity_router
 from backend.app.api.v1.map_data import router as map_data_router
@@ -58,6 +60,11 @@ api_router.include_router(ai_router)
 api_router.include_router(health_router)
 api_router.include_router(admin_router)
 api_router.include_router(sos_router)
+
+safe_router = APIRouter(prefix="/safe", tags=["Safe Declarations"])
+safe_router.add_api_route("", create_safe_event, methods=["POST"])
+safe_router.add_api_route("", list_safe_events, methods=["GET"])
+api_router.include_router(safe_router)
 api_router.include_router(reports_router)
 api_router.include_router(activity_router)
 api_router.include_router(map_data_router)

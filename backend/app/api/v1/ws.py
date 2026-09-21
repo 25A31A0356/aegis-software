@@ -147,3 +147,49 @@ async def websocket_sos_gateway(
         initial_channel=initial_ch
     )
 
+
+
+@router.get("/events")
+@router.get("/realtime")
+async def sse_realtime_stream():
+    """
+    Server-Sent Events (SSE) stream for realtime alerts, reports, and SOS dispatch.
+    """
+    import asyncio
+    from fastapi.responses import StreamingResponse
+
+    async def event_generator():
+        q = await manager.add_sse_listener()
+        try:
+            # Initial connection handshake
+            init_msg = json.dumps({
+                "type": "SYSTEM_CONNECTED",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "data": {"status": "LIVE", "channels": ["all", "reports", "hazards", "sos"]}
+            })
+            yield f"data: {init_msg}\n\n"
+
+            while True:
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=15.0)
+                    yield f"data: {json.dumps(msg)}\n\n"
+                except asyncio.TimeoutError:
+                    # Send keep-alive heartbeat
+                    hb = json.dumps({
+                        "type": "SYSTEM_HEARTBEAT",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "data": {}
+                    })
+                    yield f"data: {hb}\n\n"
+        finally:
+            manager.remove_sse_listener(q)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )

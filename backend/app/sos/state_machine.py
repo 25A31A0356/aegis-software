@@ -2,6 +2,13 @@
 AEGIS UNIFIED DATA CORE - SOS State Machine Engine
 Enforces explicit state transitions, prevents illegal state leaps, logs audit history,
 and provides atomic race-condition resolution for responder acceptance.
+
+Approved State Machine:
+Standard:
+  TRIGGERED -> ACKNOWLEDGED -> RESPONDER_MATCHING -> RESPONDER_ASSIGNED -> RESPONDER_EN_ROUTE -> ON_SITE -> RESOLVED
+
+Exceptional:
+  CANCELLED, FALSE_ALARM, EXPIRED
 """
 from enum import Enum
 from typing import Set, Dict, Optional, Tuple
@@ -13,44 +20,86 @@ from backend.app.utils.logger import logger
 
 
 class SOSState(str, Enum):
-    # Canonical India Emergency Platform Lifecycle
-    CREATED = "CREATED"
-    SYNC_PENDING = "SYNC_PENDING"
-    RECEIVED = "RECEIVED"
-    NOTIFYING = "NOTIFYING"
-    NOTIFIED = "NOTIFIED"
+    # Standard Core Lifecycle
+    TRIGGERED = "TRIGGERED"
     ACKNOWLEDGED = "ACKNOWLEDGED"
-    RESPONDING = "RESPONDING"
+    RESPONDER_MATCHING = "RESPONDER_MATCHING"
+    RESPONDER_ASSIGNED = "RESPONDER_ASSIGNED"
+    RESPONDER_EN_ROUTE = "RESPONDER_EN_ROUTE"
+    ON_SITE = "ON_SITE"
     RESOLVED = "RESOLVED"
-    FAILED = "FAILED"
+
+    # Exceptional Lifecycle
     CANCELLED = "CANCELLED"
+    FALSE_ALARM = "FALSE_ALARM"
     EXPIRED = "EXPIRED"
 
-    # Active Responder Network Dispatch States
+    # Interoperability / Legacy Aliases
+    CREATED = "CREATED"
     PENDING = "PENDING"
     MATCHING = "MATCHING"
     OFFERED = "OFFERED"
     ACCEPTED = "ACCEPTED"
-    RESPONDER_EN_ROUTE = "RESPONDER_EN_ROUTE"
-    ON_SITE = "ON_SITE"
+    RESPONDING = "RESPONDING"
+    SYNC_PENDING = "SYNC_PENDING"
+    RECEIVED = "RECEIVED"
+    NOTIFYING = "NOTIFYING"
+    NOTIFIED = "NOTIFIED"
+    FAILED = "FAILED"
 
 
 # Valid state transitions graph
 VALID_TRANSITIONS: Dict[str, Set[str]] = {
-    # Canonical Lifecycle
-    SOSState.CREATED.value: {
-        SOSState.SYNC_PENDING.value,
-        SOSState.RECEIVED.value,
-        SOSState.NOTIFYING.value,
-        SOSState.PENDING.value,
+    # 1. TRIGGERED / CREATED / PENDING
+    SOSState.TRIGGERED.value: {
+        SOSState.ACKNOWLEDGED.value,
+        SOSState.RESPONDER_MATCHING.value,
+        SOSState.MATCHING.value,
+        SOSState.OFFERED.value,
+        SOSState.RESPONDER_ASSIGNED.value,
+        SOSState.ACCEPTED.value,
         SOSState.CANCELLED.value,
-        SOSState.FAILED.value
+        SOSState.FALSE_ALARM.value,
+        SOSState.EXPIRED.value,
+        SOSState.RESOLVED.value,
+        SOSState.SYNC_PENDING.value,
+        SOSState.NOTIFYING.value,
+        SOSState.FAILED.value,
+    },
+    SOSState.PENDING.value: {
+        SOSState.ACKNOWLEDGED.value,
+        SOSState.RESPONDER_MATCHING.value,
+        SOSState.MATCHING.value,
+        SOSState.OFFERED.value,
+        SOSState.RESPONDER_ASSIGNED.value,
+        SOSState.ACCEPTED.value,
+        SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
+        SOSState.EXPIRED.value,
+        SOSState.RESOLVED.value,
+        SOSState.SYNC_PENDING.value,
+        SOSState.NOTIFYING.value,
+        SOSState.FAILED.value,
+    },
+    SOSState.CREATED.value: {
+        SOSState.ACKNOWLEDGED.value,
+        SOSState.RESPONDER_MATCHING.value,
+        SOSState.MATCHING.value,
+        SOSState.PENDING.value,
+        SOSState.OFFERED.value,
+        SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
+        SOSState.EXPIRED.value,
+        SOSState.FAILED.value,
     },
     SOSState.SYNC_PENDING.value: {
         SOSState.RECEIVED.value,
         SOSState.NOTIFYING.value,
         SOSState.PENDING.value,
+        SOSState.MATCHING.value,
+        SOSState.ACKNOWLEDGED.value,
         SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
         SOSState.FAILED.value
     },
     SOSState.RECEIVED.value: {
@@ -58,7 +107,9 @@ VALID_TRANSITIONS: Dict[str, Set[str]] = {
         SOSState.NOTIFIED.value,
         SOSState.MATCHING.value,
         SOSState.PENDING.value,
+        SOSState.ACKNOWLEDGED.value,
         SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
         SOSState.RESOLVED.value
     },
     SOSState.NOTIFYING.value: {
@@ -67,51 +118,77 @@ VALID_TRANSITIONS: Dict[str, Set[str]] = {
         SOSState.MATCHING.value,
         SOSState.OFFERED.value,
         SOSState.FAILED.value,
-        SOSState.CANCELLED.value
+        SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
     },
     SOSState.NOTIFIED.value: {
         SOSState.ACKNOWLEDGED.value,
         SOSState.RESPONDING.value,
+        SOSState.RESPONDER_EN_ROUTE.value,
         SOSState.OFFERED.value,
         SOSState.ACCEPTED.value,
+        SOSState.RESPONDER_ASSIGNED.value,
         SOSState.RESOLVED.value,
-        SOSState.CANCELLED.value
+        SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
     },
+
+    # 2. ACKNOWLEDGED
     SOSState.ACKNOWLEDGED.value: {
-        SOSState.RESPONDING.value,
+        SOSState.RESPONDER_MATCHING.value,
+        SOSState.MATCHING.value,
+        SOSState.OFFERED.value,
+        SOSState.RESPONDER_ASSIGNED.value,
         SOSState.ACCEPTED.value,
+        SOSState.RESPONDING.value,
         SOSState.RESPONDER_EN_ROUTE.value,
-        SOSState.RESOLVED.value,
-        SOSState.CANCELLED.value
-    },
-    SOSState.RESPONDING.value: {
         SOSState.ON_SITE.value,
         SOSState.RESOLVED.value,
         SOSState.CANCELLED.value,
-        SOSState.FAILED.value
+        SOSState.FALSE_ALARM.value,
+        SOSState.EXPIRED.value,
     },
 
-    # Responder Network Operations
-    SOSState.PENDING.value: {
-        SOSState.MATCHING.value,
-        SOSState.NOTIFYING.value,
+    # 3. RESPONDER_MATCHING / MATCHING / OFFERED
+    SOSState.RESPONDER_MATCHING.value: {
         SOSState.OFFERED.value,
+        SOSState.RESPONDER_ASSIGNED.value,
         SOSState.ACCEPTED.value,
+        SOSState.ACKNOWLEDGED.value,
         SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
         SOSState.EXPIRED.value,
         SOSState.RESOLVED.value
     },
     SOSState.MATCHING.value: {
         SOSState.OFFERED.value,
         SOSState.ACCEPTED.value,
+        SOSState.RESPONDER_ASSIGNED.value,
+        SOSState.ACKNOWLEDGED.value,
         SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
         SOSState.EXPIRED.value,
         SOSState.RESOLVED.value
     },
     SOSState.OFFERED.value: {
         SOSState.ACCEPTED.value,
+        SOSState.RESPONDER_ASSIGNED.value,
+        SOSState.ACKNOWLEDGED.value,
         SOSState.MATCHING.value,
+        SOSState.RESPONDER_MATCHING.value,
         SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
+        SOSState.EXPIRED.value,
+        SOSState.RESOLVED.value
+    },
+
+    # 4. RESPONDER_ASSIGNED / ACCEPTED
+    SOSState.RESPONDER_ASSIGNED.value: {
+        SOSState.RESPONDER_EN_ROUTE.value,
+        SOSState.RESPONDING.value,
+        SOSState.ON_SITE.value,
+        SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
         SOSState.EXPIRED.value,
         SOSState.RESOLVED.value
     },
@@ -120,22 +197,37 @@ VALID_TRANSITIONS: Dict[str, Set[str]] = {
         SOSState.RESPONDING.value,
         SOSState.ON_SITE.value,
         SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
         SOSState.EXPIRED.value,
         SOSState.RESOLVED.value
     },
+
+    # 5. RESPONDER_EN_ROUTE / RESPONDING
     SOSState.RESPONDER_EN_ROUTE.value: {
         SOSState.ON_SITE.value,
         SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
         SOSState.RESOLVED.value
     },
-    SOSState.ON_SITE.value: {
+    SOSState.RESPONDING.value: {
+        SOSState.ON_SITE.value,
         SOSState.RESOLVED.value,
-        SOSState.CANCELLED.value
+        SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value,
+        SOSState.FAILED.value
     },
 
-    # Terminal states
+    # 6. ON_SITE
+    SOSState.ON_SITE.value: {
+        SOSState.RESOLVED.value,
+        SOSState.CANCELLED.value,
+        SOSState.FALSE_ALARM.value
+    },
+
+    # 7. Terminal states
     SOSState.RESOLVED.value: set(),
     SOSState.CANCELLED.value: set(),
+    SOSState.FALSE_ALARM.value: set(),
     SOSState.EXPIRED.value: set(),
     SOSState.FAILED.value: set()
 }
@@ -144,6 +236,7 @@ VALID_TRANSITIONS: Dict[str, Set[str]] = {
 class SOSStateMachine:
     """
     Manages SOS incident state transitions and validates lifecycle correctness.
+    Every transition is validated, persisted, and generates an event.
     """
 
     @classmethod
@@ -182,12 +275,15 @@ class SOSStateMachine:
             now = utc_now()
             sos.updated_at = now
 
-            if new_state == SOSState.ACCEPTED.value:
+            if new_state in (SOSState.ACCEPTED.value, SOSState.RESPONDER_ASSIGNED.value):
                 if not sos.accepted_at:
                     sos.accepted_at = now
+            elif new_state == SOSState.ACKNOWLEDGED.value:
+                if hasattr(sos, "acknowledged_at"):
+                    sos.acknowledged_at = now
             elif new_state == SOSState.RESOLVED.value:
                 sos.resolved_at = now
-            elif new_state == SOSState.CANCELLED.value:
+            elif new_state in (SOSState.CANCELLED.value, SOSState.FALSE_ALARM.value):
                 sos.cancelled_at = now
 
             # Audit history record
@@ -218,9 +314,20 @@ class SOSStateMachine:
         now = utc_now()
         
         # 1. Fetch with row locking where available, or verify conditional status
+        offerable_states = [
+            SOSState.PENDING.value,
+            SOSState.MATCHING.value,
+            SOSState.OFFERED.value,
+            SOSState.ACKNOWLEDGED.value,
+            SOSState.TRIGGERED.value,
+            SOSState.RESPONDER_MATCHING.value,
+            SOSState.CREATED.value,
+            SOSState.RECEIVED.value,
+            SOSState.NOTIFIED.value
+        ]
         query = select(SOSSignal).where(
             SOSSignal.id == sos_id,
-            SOSSignal.status.in_([SOSState.PENDING.value, SOSState.MATCHING.value, SOSState.OFFERED.value]),
+            SOSSignal.status.in_(offerable_states),
             SOSSignal.accepted_by == None
         )
         
@@ -236,6 +343,7 @@ class SOSStateMachine:
             return False, None
 
         # 2. Transition atomically
+        old_status = sos.status
         sos.status = SOSState.ACCEPTED.value
         sos.accepted_by = responder_user_id
         sos.accepted_at = now
@@ -244,7 +352,7 @@ class SOSStateMachine:
         # Add status audit history
         history = SOSStatusHistory(
             sos_id=sos.id,
-            old_status=SOSState.OFFERED.value,
+            old_status=old_status,
             new_status=SOSState.ACCEPTED.value,
             changed_by_user_id=responder_user_id,
             reason="Offer accepted by primary responder"

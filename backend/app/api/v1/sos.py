@@ -352,6 +352,18 @@ async def create_sos_incident(
     5. Dispatches real-time Rapido-like offers.
     6. Synchronizes active state across Web and App clients.
     """
+    # 0. GPS Coordinates Validation
+    if payload.latitude == 0.0 and payload.longitude == 0.0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid GPS coordinates (0.0, 0.0). Actual location coordinates are required."
+        )
+    if not (-90.0 <= payload.latitude <= 90.0) or not (-180.0 <= payload.longitude <= 180.0):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="GPS coordinates out of valid planetary range."
+        )
+
     user_id = (current_user.id if current_user else None) or payload.requester_user_id or x_aegis_user_id
     now = utc_now()
     expires = now + timedelta(minutes=settings.SOS_EXPIRATION_MINUTES)
@@ -1385,6 +1397,7 @@ async def get_sos_details(
 
 
 @router.post("/{sos_id}/accept", response_model=ApiResponse[SOSResponseSchema])
+@router.post("/{sos_id}/accept-offer", response_model=ApiResponse[SOSResponseSchema])
 async def accept_sos_offer(
     sos_id: str,
     db: AsyncSession = Depends(get_db),
@@ -1779,6 +1792,56 @@ async def resolve_sos_incident(
     )
 
 
+
+@router.post("/{sos_id}/false-alarm", response_model=ApiResponse[SOSResponseSchema])
+async def mark_sos_false_alarm(
+    sos_id: str,
+    payload: SOSCancelRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    Marks an SOS incident as FALSE_ALARM.
+    """
+    res = await db.execute(select(SOSSignal).where(SOSSignal.id == sos_id))
+    sos = res.scalars().first()
+    if not sos:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SOS incident not found.")
+
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id
+
+    await SOSStateMachine.transition(
+        db=db,
+        sos=sos,
+        target_state=SOSState.FALSE_ALARM.value,
+        changed_by_user_id=user_id,
+        reason=payload.reason or "Marked as false alarm"
+    )
+
+    assign_res = await db.execute(
+        select(SOSAssignment).where(SOSAssignment.sos_id == sos.id, SOSAssignment.status == "ACTIVE")
+    )
+    assignment = assign_res.scalars().first()
+    if assignment:
+        assignment.status = "CANCELLED"
+
+    await db.commit()
+    await db.refresh(sos)
+
+    await NotificationService.broadcast_sos_event(
+        event_name="SOS_FALSE_ALARM",
+        sos=sos,
+        extra_data={"reason": payload.reason}
+    )
+
+    return ApiResponse(
+        success=True,
+        data=_build_sos_response(sos, is_authorized=True),
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+    )
+
+
 @router.post("/{sos_id}/cancel", response_model=ApiResponse[SOSResponseSchema])
 async def cancel_sos_incident(
     sos_id: str,
@@ -1829,3 +1892,193 @@ async def cancel_sos_incident(
     )
 
 
+
+
+@router.post("/{sos_id}/acknowledge", response_model=ApiResponse[SOSResponseSchema])
+async def acknowledge_sos_incident(
+    sos_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id")
+):
+    """
+    Marks SOS as ACKNOWLEDGED by emergency responders or control room.
+    """
+    res = await db.execute(select(SOSSignal).where(SOSSignal.id == sos_id))
+    sos = res.scalars().first()
+    if not sos:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SOS incident not found.")
+
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id
+
+    await SOSStateMachine.transition(
+        db=db,
+        sos=sos,
+        target_state=SOSState.ACKNOWLEDGED.value,
+        changed_by_user_id=user_id,
+        reason="Incident acknowledged by operator or responder"
+    )
+    await db.commit()
+    await db.refresh(sos)
+
+    await NotificationService.broadcast_sos_event(
+        event_name="SOS_ACKNOWLEDGED",
+        sos=sos,
+        extra_data={"acknowledged_by": user_id}
+    )
+
+    return ApiResponse(
+        success=True,
+        data=_build_sos_response(sos, is_authorized=True),
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+    )
+
+
+def _build_safe_response(safe: SafeEvent) -> SafeResponseSchema:
+    phone_masked = safe.user_phone or ""
+    if len(phone_masked) > 4:
+        phone_masked = phone_masked[:3] + "..." + phone_masked[-2:]
+    return SafeResponseSchema(
+        id=safe.id,
+        user_id=safe.user_id,
+        device_id=safe.device_id,
+        sos_id=safe.sos_id,
+        user_name=safe.user_name,
+        user_phone_masked=phone_masked,
+        status=safe.status,
+        message=safe.message or "",
+        latitude=safe.latitude,
+        longitude=safe.longitude,
+        accuracy_meters=safe.accuracy_meters,
+        location_name=safe.location_name,
+        district=safe.district,
+        state=safe.state,
+        country=safe.country,
+        contacts_notified_count=safe.contacts_notified_count,
+        idempotency_key=safe.idempotency_key,
+        sync_status=safe.sync_status,
+        recorded_at=safe.recorded_at.isoformat() if safe.recorded_at else (safe.created_at.isoformat() if safe.created_at else utc_now().isoformat()),
+        created_at=safe.created_at.isoformat() if safe.created_at else utc_now().isoformat()
+    )
+
+
+async def create_safe_event(
+    payload: SafeCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_aegis_user_id: Optional[str] = Header(default=None, alias="X-Aegis-User-Id"),
+    x_aegis_device_id: Optional[str] = Header(default=None, alias="X-Aegis-Device-Id")
+) -> ApiResponse[SafeResponseSchema]:
+    user_id = (current_user.id if current_user else None) or x_aegis_user_id or payload.user_id
+    device_id = x_aegis_device_id or payload.device_id
+
+    # Deduplication check via idempotency key
+    if payload.idempotency_key:
+        existing_res = await db.execute(
+            select(SafeEvent).where(SafeEvent.idempotency_key == payload.idempotency_key)
+        )
+        existing = existing_res.scalars().first()
+        if existing:
+            return ApiResponse(
+                success=True,
+                data=_build_safe_response(existing),
+                freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+            )
+
+    # Check for active SOS signal to resolve or link
+    active_sos = None
+    if user_id:
+        sos_res = await db.execute(
+            select(SOSSignal).where(
+                or_(SOSSignal.user_id == user_id, SOSSignal.requester_user_id == user_id),
+                SOSSignal.status.in_(["PENDING", "MATCHING", "OFFERED", "ACCEPTED", "RESPONDER_EN_ROUTE", "ON_SITE"])
+            )
+        )
+        active_sos = sos_res.scalars().first()
+    elif device_id:
+        sos_res = await db.execute(
+            select(SOSSignal).where(
+                SOSSignal.device_id == device_id,
+                SOSSignal.status.in_(["PENDING", "MATCHING", "OFFERED", "ACCEPTED", "RESPONDER_EN_ROUTE", "ON_SITE"])
+            )
+        )
+        active_sos = sos_res.scalars().first()
+
+    if active_sos:
+        await SOSStateMachine.transition(
+            db=db,
+            sos=active_sos,
+            target_state=SOSState.RESOLVED.value,
+            changed_by_user_id=user_id,
+            reason="User declared self safe"
+        )
+
+    now = utc_now()
+    safe_record = SafeEvent(
+        user_id=user_id,
+        device_id=device_id,
+        sos_id=active_sos.id if active_sos else None,
+        user_name=payload.user_name or "Citizen",
+        user_phone=payload.user_phone or "",
+        status="SAFE",
+        message=payload.message or "I am safe and out of danger.",
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        accuracy_meters=payload.accuracy_meters or 10.0,
+        location_name=payload.location_name or "",
+        district=payload.district or "",
+        state=payload.state or "",
+        country=payload.country or "India",
+        idempotency_key=payload.idempotency_key,
+        sync_status="SYNCED",
+        contacts_notified_count=len(payload.emergency_contacts) if payload.emergency_contacts else 0,
+        recorded_at=now,
+        created_at=now
+    )
+    db.add(safe_record)
+
+    loc_desc = safe_record.district or safe_record.state or "Location"
+    act = ActivityEvent(
+        event_type="SAFE_DECLARATION",
+        title=f"{safe_record.user_name} Marked Safe",
+        description=f"{safe_record.user_name} declared safe in {loc_desc}: \"{safe_record.message}\"",
+        severity="INFO",
+        latitude=safe_record.latitude,
+        longitude=safe_record.longitude,
+        state_name=safe_record.state or "National",
+        district_name=safe_record.district or "General",
+        created_at=now
+    )
+    db.add(act)
+    await db.commit()
+    await db.refresh(safe_record)
+
+    return ApiResponse(
+        success=True,
+        data=_build_safe_response(safe_record),
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0)
+    )
+
+
+async def list_safe_events(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    state: Optional[str] = Query(default=None),
+    district: Optional[str] = Query(default=None),
+    db: AsyncSession = Depends(get_db)
+) -> ApiResponse[List[SafeResponseSchema]]:
+    query = select(SafeEvent)
+    if state:
+        query = query.where(SafeEvent.state.ilike(f"%{state}%"))
+    if district:
+        query = query.where(SafeEvent.district.ilike(f"%{district}%"))
+    
+    query = query.order_by(desc(SafeEvent.created_at)).offset(offset).limit(limit)
+    res = await db.execute(query)
+    records = res.scalars().all()
+
+    return ApiResponse(
+        success=True,
+        data=[_build_safe_response(r) for r in records],
+        freshness=FreshnessMetadata(status="fresh", age_seconds=10)
+    )

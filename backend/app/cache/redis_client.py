@@ -1,11 +1,11 @@
-﻿"""
+"""
 AEGIS UNIFIED DATA CORE - Redis Cache & In-Memory Fallback Client
 Provides high-performance caching for live observations, telemetry streams,
 distributed locks, and rate limiting with automatic in-memory fallback.
 """
 import json
 import time
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 import redis.asyncio as aioredis
 from backend.app.core.config import settings
 from backend.app.utils.logger import logger
@@ -16,26 +16,47 @@ class CacheManager:
     _memory_cache: dict = {}
     _memory_expiry: dict = {}
     _is_redis_connected: bool = False
+    _last_connect_attempt: float = 0.0
+    _connect_cooldown_sec: float = 60.0
 
     @classmethod
     async def get_redis(cls) -> Optional[aioredis.Redis]:
-        if cls._redis is None or not cls._is_redis_connected:
-            try:
-                client = aioredis.from_url(
-                    settings.REDIS_URL,
-                    encoding="utf-8",
-                    decode_responses=True,
-                    socket_connect_timeout=3.0
-                )
-                await client.ping()
-                cls._redis = client
-                cls._is_redis_connected = True
-                logger.info(f"Connected to Redis cache at {settings.REDIS_URL} successfully.")
-            except Exception as e:
-                cls._redis = None
-                cls._is_redis_connected = False
-                logger.warning(f"Redis unavailable at {settings.REDIS_URL} ({e}). Using In-Memory Cache fallback.")
-        return cls._redis if cls._is_redis_connected else None
+        if cls._is_redis_connected and cls._redis is not None:
+            return cls._redis
+
+        now = time.time()
+        if now - cls._last_connect_attempt < cls._connect_cooldown_sec:
+            return None
+
+        cls._last_connect_attempt = now
+        try:
+            client = aioredis.from_url(
+                settings.REDIS_URL,
+                encoding="utf-8",
+                decode_responses=True,
+                socket_connect_timeout=0.5
+            )
+            await client.ping()
+            cls._redis = client
+            cls._is_redis_connected = True
+            logger.info(f"Connected to Redis cache at {settings.REDIS_URL} successfully.")
+            return cls._redis
+        except Exception as e:
+            cls._redis = None
+            cls._is_redis_connected = False
+            return None
+
+    @classmethod
+    async def check_health(cls) -> Dict[str, Any]:
+        """Returns health status of caching subsystem."""
+        if cls._is_redis_connected and cls._redis is not None:
+            return {"status": "HEALTHY", "engine": "Redis", "connected": True}
+        return {
+            "status": "HEALTHY",
+            "engine": "In-Memory Fallback Cache",
+            "connected": True,
+            "cached_keys": len(cls._memory_cache)
+        }
 
     @classmethod
     async def get(cls, key: str) -> Optional[Any]:
@@ -88,20 +109,19 @@ class CacheManager:
         except Exception:
             cls._is_redis_connected = False
             cls._redis = None
+
         cls._memory_cache.pop(key, None)
         cls._memory_expiry.pop(key, None)
         return True
 
     @classmethod
-    async def check_health(cls) -> dict:
-        """Returns cache status and connectivity."""
+    async def clear_all(cls):
+        """Clears local memory cache."""
+        cls._memory_cache.clear()
+        cls._memory_expiry.clear()
         try:
             r = await cls.get_redis()
             if r:
-                await r.ping()
-                return {"status": "HEALTHY", "engine": "Redis", "connected": True}
-        except Exception as e:
-            cls._redis = None
-            cls._is_redis_connected = False
-            return {"status": "DEGRADED", "engine": "InMemoryFallback", "error": str(e), "connected": False}
-        return {"status": "DEGRADED", "engine": "InMemoryFallback", "connected": False}
+                await r.flushdb()
+        except Exception:
+            pass

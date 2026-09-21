@@ -43,6 +43,8 @@ class NotificationService:
             name = contact.get("name", "Emergency Contact")
             relationship = contact.get("relationship", "Family")
 
+            loc_desc = sos.address or (f"{sos.district}, {sos.state}" if sos.district else None) or f"{sos.latitude:.4f}, {sos.longitude:.4f}"
+            alert_msg = f"Emergency SOS activated by {sos.caller_name}. Current location: {loc_desc}. Open AEGIS ALERT to view the live emergency location."
             details = {
                 "contact_name": name,
                 "contact_phone": phone,
@@ -52,7 +54,9 @@ class NotificationService:
                 "latitude": sos.latitude,
                 "longitude": sos.longitude,
                 "address": sos.address or sos.city or "Unknown Location",
-                "message": f"EMERGENCY ALERT: Your contact {sos.caller_name} has activated SOS distress assistance at {sos.city or 'current location'}."
+                "message": alert_msg,
+                "delivery_channel": "SMS",
+                "delivery_timestamp": utc_now().isoformat()
             }
 
             notification = SOSNotification(
