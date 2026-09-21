@@ -1490,7 +1490,7 @@ async def accept_sos_offer(
 
     # 6. Broadcast real-time SOS_ACCEPTED event
     await NotificationService.broadcast_sos_event(
-        event_name="SOS_ACCEPTED",
+        event_name="SOS_ASSIGNED",
         sos=sos,
         extra_data={
             "responder_id": responder_id,
@@ -1673,7 +1673,7 @@ async def update_responder_location(
     await db.commit()
 
     # Real-time event
-    event_name = "SOS_ROUTE_UPDATED" if recalculated else "SOS_RESPONDER_MOVING"
+    event_name = "RESPONDER_LOCATION_UPDATED"
     await NotificationService.broadcast_sos_event(
         event_name=event_name,
         sos=sos,
@@ -1730,7 +1730,7 @@ async def update_sos_status(
     await db.commit()
     await db.refresh(sos)
 
-    event_name = f"SOS_{payload.status.upper()}" if payload.status.upper() in ("ON_SITE", "RESPONDER_EN_ROUTE") else "SOS_UPDATED"
+    event_name = "SOS_STATUS_UPDATED"
     await NotificationService.broadcast_sos_event(event_name=event_name, sos=sos)
 
     return ApiResponse(

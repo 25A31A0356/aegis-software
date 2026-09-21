@@ -3,17 +3,17 @@ AEGIS UNIFIED DATA CORE - SOS Notification Delivery Subsystem
 Abstracts dispatching across In-App WebSockets, Family Emergency Contacts (SMS/Alerts),
 and Mobile Push Notification interfaces (FCM / APNs ready).
 """
+import uuid
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.database.models import SOSSignal, SOSNotification, utc_now
-from backend.app.realtime.manager import EventBroker, manager
+from backend.app.realtime.manager import EventBroker, manager, EVENT_SCHEMA_VERSION
 from backend.app.utils.logger import logger
 
 
 class BasePushAdapter:
     """Pluggable push notification adapter interface."""
     async def send_push(self, device_token: str, title: str, body: str, data: Dict[str, Any]) -> bool:
-        # Default mock / log adapter for local development
         logger.info(f"[Push Notification] Sent to token={device_token[:8]}... title='{title}', body='{body}'")
         return True
 
@@ -99,22 +99,34 @@ class NotificationService:
                 "sos_id": sos.id,
                 "emergency_type": sos.emergency_type,
                 "severity": sos.severity,
-                "approximate_distance_km": dist_km,
-                "approximate_area": sos.district or sos.city or sos.state or "Nearby Area",
-                "short_message": sos.short_message or "Citizen requested urgent assistance",
-                "requested_at": sos.created_at.isoformat() if sos.created_at else utc_now().isoformat(),
-                "expires_in_seconds": 45
+                "approximate_distance_km": round(dist_km, 2),
+                "district": sos.district or sos.city or "Your Jurisdiction",
+                "expires_at": (utc_now().timestamp() + 45),
+                "offer_type": "EMERGENCY_DISPATCH_PROXIMITY"
             }
 
-            # 1. Send targeted real-time WebSocket notification to candidate
-            await manager.send_to_user(user_id, {
-                "event": "SOS_OFFERED",
-                "category": "SOS",
-                "timestamp": utc_now().isoformat(),
-                "data": offer_payload
-            })
+            # 1. Direct Web/App WebSocket notification
+            await manager.send_to_user(
+                user_id=user_id,
+                message={
+                    "id": f"evt_{uuid.uuid4().hex}",
+                    "version": EVENT_SCHEMA_VERSION,
+                    "event": "SOS_OFFER_RECEIVED",
+                    "category": "SOS",
+                    "channel": f"user:{user_id}",
+                    "timestamp": utc_now().isoformat(),
+                    "data": offer_payload
+                }
+            )
 
-            # 2. Record notification
+            # 2. Push Notification Adapter
+            await cls.push_adapter.send_push(
+                device_token=f"token_{user_id}",
+                title="🚨 IMMEDIATE EMERGENCY NEARBY",
+                body=f"{sos.emergency_type.upper()} ({dist_km:.1f} km away). Tap to accept response mission.",
+                data=offer_payload
+            )
+
             notification = SOSNotification(
                 sos_id=sos.id,
                 recipient_type="NEARBY_RESPONDER",
@@ -185,8 +197,8 @@ class NotificationService:
     ):
         """
         Broadcasts authorized event payloads to relevant participants:
-        - General public/operators: Sanitized general event
-        - Channel `sos:{sos_id}`: Detailed event for assigned participants
+        - General public/operators: Sanitized general event on channel 'sos'
+        - Channel `sos:{sos_id}`: Incident channel for assigned participants
         - Direct user socket for requester and assigned responder
         """
         base_data = {
@@ -214,18 +226,19 @@ class NotificationService:
         )
 
         # 2. Broadcast to specific incident channel
-        await manager.broadcast_ws({
-            "event": event_name,
-            "channel": f"sos:{sos.id}",
-            "category": "SOS",
-            "timestamp": utc_now().isoformat(),
-            "data": base_data
-        }, channel=f"sos:{sos.id}")
+        await EventBroker.publish_event(
+            event_type=event_name,
+            data=base_data,
+            channel=f"sos:{sos.id}",
+            category="SOS"
+        )
 
         # 3. Direct notify requester
         requester_id = sos.requester_user_id or sos.user_id
         if requester_id:
             await manager.send_to_user(requester_id, {
+                "id": f"evt_{uuid.uuid4().hex}",
+                "version": EVENT_SCHEMA_VERSION,
                 "event": event_name,
                 "channel": f"user:{requester_id}",
                 "category": "SOS",
@@ -235,7 +248,6 @@ class NotificationService:
 
         # 4. Direct notify assigned responder
         if sos.accepted_by:
-            # Include authorized exact coordinates for the assigned responder
             responder_data = dict(base_data)
             responder_data["latitude"] = sos.latitude
             responder_data["longitude"] = sos.longitude
@@ -244,6 +256,8 @@ class NotificationService:
             responder_data["address"] = sos.address
             
             await manager.send_to_user(sos.accepted_by, {
+                "id": f"evt_{uuid.uuid4().hex}",
+                "version": EVENT_SCHEMA_VERSION,
                 "event": event_name,
                 "channel": f"user:{sos.accepted_by}",
                 "category": "SOS",
@@ -258,49 +272,27 @@ class NotificationService:
         extra_data: Optional[Dict[str, Any]] = None
     ):
         """
-        Broadcasts citizen SAFE declaration to general safety and SOS channels.
+        Broadcasts SAFE status event to community map and subscribers.
         """
-        data = {
+        payload = {
             "id": safe_event.id,
             "user_id": safe_event.user_id,
-            "device_id": safe_event.device_id,
-            "sos_id": safe_event.sos_id,
             "user_name": safe_event.user_name,
-            "status": safe_event.status,
+            "status": "SAFE",
             "message": safe_event.message,
             "latitude": safe_event.latitude,
             "longitude": safe_event.longitude,
-            "location_name": safe_event.location_name,
             "district": safe_event.district,
             "state": safe_event.state,
-            "country": safe_event.country,
-            "created_at": safe_event.created_at.isoformat() if safe_event.created_at else "",
+            "location_name": safe_event.location_name,
+            "recorded_at": safe_event.recorded_at.isoformat() if safe_event.recorded_at else utc_now().isoformat()
         }
         if extra_data:
-            data.update(extra_data)
+            payload.update(extra_data)
 
-        # 1. General safety & SOS broadcast
         await EventBroker.publish_event(
-            event_type="SAFE_CREATED",
-            data=data,
-            channel="sos",
-            category="SAFE"
+            event_type="SAFE_DECLARED",
+            data=payload,
+            channel="all",
+            category="SAFE_EVENT"
         )
-        await manager.broadcast_ws({
-            "event": "SAFE_CREATED",
-            "channel": "safe",
-            "category": "SAFE",
-            "timestamp": utc_now().isoformat(),
-            "data": data
-        }, channel="safe")
-
-        # 2. If associated with an SOS, broadcast to that SOS channel
-        if safe_event.sos_id:
-            await manager.broadcast_ws({
-                "event": "SOS_RESOLVED_BY_SAFE",
-                "channel": f"sos:{safe_event.sos_id}",
-                "category": "SOS",
-                "timestamp": utc_now().isoformat(),
-                "data": data
-            }, channel=f"sos:{safe_event.sos_id}")
-
