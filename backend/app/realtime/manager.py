@@ -1,9 +1,10 @@
 """
-AEGIS UNIFIED DATA CORE - Real-Time Event Broker & WebSocket/SSE Manager
+AEGIS UNIFIED DATA CORE - Real-Time Event Broker & WebSocket/SSE/Redis Streams Manager
 Coordinates live synchronization across Aegis Web (Portal) and Aegis App (Mobile).
 """
 import asyncio
 import json
+import uuid
 from typing import Dict, Set, Any, Optional
 from datetime import datetime, timezone
 from fastapi import WebSocket
@@ -126,7 +127,7 @@ manager = ConnectionManager()
 
 class EventBroker:
     """
-    High-level Event Broker for dispatching sanitized events to Web, Mobile, and Redis PubSub.
+    High-level Event Broker for dispatching sanitized events to Web, Mobile, Redis PubSub, and Redis Streams.
     """
     @staticmethod
     def sanitize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -151,9 +152,11 @@ class EventBroker:
         1. Local connected WebSockets (Web + App)
         2. Local SSE streaming connections
         3. Distributed Redis PubSub channel
+        4. Durable Redis Streams append-only log (aegis:events:stream)
         """
         sanitized_data = cls.sanitize_payload(data)
         event_packet = {
+            "id": str(uuid.uuid4()),
             "event": event_type,
             "category": category,
             "channel": channel,
@@ -167,12 +170,21 @@ class EventBroker:
         # 2. Broadcast to SSE streams
         await manager.broadcast_sse(event_packet)
 
-        # 3. Publish to Redis if available
+        # 3. Publish to Redis PubSub & Redis Streams if available
         try:
             r = await CacheManager.get_redis()
             if r:
-                await r.publish("aegis:realtime:events", json.dumps(event_packet))
+                serialized = json.dumps(event_packet)
+                # At-most-once low latency pub/sub
+                await r.publish("aegis:realtime:events", serialized)
+                # Durable stream append for reconnection replay
+                await r.xadd(
+                    "aegis:events:stream",
+                    {"event_type": event_type, "channel": channel, "payload": serialized},
+                    maxlen=5000,
+                    approximate=True
+                )
         except Exception as e:
-            logger.debug(f"Redis pubsub publish skipped: {e}")
+            logger.debug(f"Redis pubsub/streams publish skipped: {e}")
 
         logger.info(f"Broadcasted real-time event '{event_type}' on channel '{channel}' to Web & App clients.")
