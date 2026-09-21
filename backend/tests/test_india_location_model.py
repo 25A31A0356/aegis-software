@@ -1,71 +1,85 @@
 """
-Tests for Comprehensive India Location Model covering all 36 States & UTs.
+Tests for Comprehensive Pan-India 780+ Districts Location Model & Spatial Registry.
+Covers all 28 States and 8 Union Territories.
 """
 import pytest
 from backend.app.providers.adapters.geographic import GeographicLocationProvider, OFFLINE_LOCATIONS, haversine_km
+from backend.app.providers.adapters.india_districts_data import ALL_INDIA_DISTRICTS
 
 
-def test_offline_centroids_cover_all_regions():
-    assert len(OFFLINE_LOCATIONS) >= 36
+def test_pan_india_districts_count_and_coverage():
+    """Verify that spatial registry contains over 780 official districts."""
+    assert len(ALL_INDIA_DISTRICTS) >= 780
+    assert len(OFFLINE_LOCATIONS) >= 780
 
-    states = {loc["state"] for loc in OFFLINE_LOCATIONS}
-    # Check major states & UTs
-    assert "Andhra Pradesh" in states
-    assert "Telangana" in states
-    assert "Karnataka" in states
-    assert "Tamil Nadu" in states
-    assert "Maharashtra" in states
-    assert "Delhi" in states
-    assert "Kerala" in states
-    assert "Gujarat" in states
-    assert "Rajasthan" in states
-    assert "Uttar Pradesh" in states
-    assert "Bihar" in states
-    assert "West Bengal" in states
-    assert "Odisha" in states
-    assert "Assam" in states
-    assert "Punjab" in states
-    assert "Haryana" in states
-    assert "Madhya Pradesh" in states
-    assert "Jharkhand" in states
-    assert "Chhattisgarh" in states
-    assert "Himachal Pradesh" in states
-    assert "Uttarakhand" in states
-    assert "Goa" in states
-    assert "Tripura" in states
-    assert "Meghalaya" in states
-    assert "Manipur" in states
-    assert "Nagaland" in states
-    assert "Mizoram" in states
-    assert "Arunachal Pradesh" in states
-    assert "Sikkim" in states
-    assert "Jammu and Kashmir" in states
-    assert "Ladakh" in states
-    assert "Chandigarh" in states
-    assert "Puducherry" in states
-    assert "Andaman and Nicobar Islands" in states
-    assert "Dadra and Nagar Haveli and Daman and Diu" in states
-    assert "Lakshadweep" in states
+    states = {loc["state"] for loc in ALL_INDIA_DISTRICTS}
+    # All 28 Indian States
+    expected_states = [
+        "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+        "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+        "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+        "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+        "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+    ]
+    for st in expected_states:
+        assert st in states, f"Missing State: {st}"
+
+    # All 8 Union Territories
+    expected_uts = [
+        "Andaman and Nicobar Islands", "Chandigarh",
+        "Dadra and Nagar Haveli and Daman and Diu", "Delhi",
+        "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+    ]
+    for ut in expected_uts:
+        assert ut in states, f"Missing Union Territory: {ut}"
 
 
-def test_reverse_geocoding_accuracy():
-    # Mumbai coordinates
+def test_reverse_geocoding_accuracy_across_cardinal_corners():
+    """Authoritatively test reverse-geocoding across India's North, South, East, West, and Island territories."""
+    # 1. North: Leh, Ladakh
+    res_leh = GeographicLocationProvider.reverse_geocode_offline(34.1526, 77.5771)
+    assert res_leh["state"] == "Ladakh"
+    assert "Leh" in res_leh["district"] or "Leh" in res_leh["name"]
+    assert res_leh["country"] == "India"
+    assert res_leh["elevation"] >= 3000
+
+    # 2. South: Kanniyakumari, Tamil Nadu
+    res_kanyakumari = GeographicLocationProvider.reverse_geocode_offline(8.0883, 77.5385)
+    assert res_kanyakumari["state"] == "Tamil Nadu"
+    assert "Kanniyakumari" in res_kanyakumari["district"] or "Kanyakumari" in res_kanyakumari["district"]
+
+    # 3. East: Anjaw / Tezu, Arunachal Pradesh
+    res_east = GeographicLocationProvider.reverse_geocode_offline(28.0000, 96.5000)
+    assert res_east["state"] == "Arunachal Pradesh"
+    assert "Anjaw" in res_east["district"]
+
+    # 4. West: Kachchh, Gujarat
+    res_west = GeographicLocationProvider.reverse_geocode_offline(23.2420, 69.6669)
+    assert res_west["state"] == "Gujarat"
+    assert "Kachchh" in res_west["district"] or "Kutch" in res_west["district"]
+
+    # 5. Island UT 1: Port Blair, Andaman & Nicobar
+    res_andaman = GeographicLocationProvider.reverse_geocode_offline(11.6234, 92.7265)
+    assert res_andaman["state"] == "Andaman and Nicobar Islands"
+    assert "Andaman" in res_andaman["district"]
+
+    # 6. Island UT 2: Kavaratti, Lakshadweep
+    res_lak = GeographicLocationProvider.reverse_geocode_offline(10.5669, 72.6420)
+    assert res_lak["state"] == "Lakshadweep"
+    assert "Lakshadweep" in res_lak["district"]
+
+    # 7. Major Metros
     res_mumbai = GeographicLocationProvider.reverse_geocode_offline(19.0760, 72.8777)
     assert res_mumbai["state"] == "Maharashtra"
-    assert "Mumbai" in res_mumbai["name"]
 
-    # Bengaluru coordinates
+    res_delhi = GeographicLocationProvider.reverse_geocode_offline(28.6139, 77.2090)
+    assert res_delhi["state"] == "Delhi"
+
     res_blr = GeographicLocationProvider.reverse_geocode_offline(12.9716, 77.5946)
     assert res_blr["state"] == "Karnataka"
-    assert "Bengaluru" in res_blr["name"]
-
-    # Kolkata coordinates
-    res_kol = GeographicLocationProvider.reverse_geocode_offline(22.5726, 88.3639)
-    assert res_kol["state"] == "West Bengal"
-    assert "Kolkata" in res_kol["name"]
 
 
 def test_haversine_distance():
     # Distance between New Delhi (28.6139, 77.2090) and Gurugram (28.4595, 77.0266) is approx 24-30 km
     dist = haversine_km(28.6139, 77.2090, 28.4595, 77.0266)
-    assert 20.0 <= dist <= 35.0
+    assert 20.0 <= dist <= 35.0

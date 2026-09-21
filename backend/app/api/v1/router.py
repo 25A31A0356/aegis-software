@@ -15,7 +15,7 @@ from backend.app.api.v1.cyclones import router as cyclones_router
 from backend.app.api.v1.lightning import router as lightning_router
 from backend.app.api.v1.wildfires import router as wildfires_router
 from backend.app.api.v1.air_quality import router as air_quality_router
-from backend.app.api.v1.location import router as location_router
+from backend.app.api.v1.location import router as location_router, locations_router
 from backend.app.api.v1.status import router as status_router
 from backend.app.api.v1.sources import router as sources_router
 from backend.app.api.v1.correlation import router as correlation_router
@@ -49,6 +49,8 @@ api_router.include_router(lightning_router)
 api_router.include_router(wildfires_router)
 api_router.include_router(air_quality_router)
 api_router.include_router(location_router)
+api_router.include_router(locations_router)
+
 api_router.include_router(status_router)
 api_router.include_router(sources_router)
 api_router.include_router(correlation_router)

@@ -160,3 +160,11 @@ async def reverse_location(
             processing_version="1.0.0"
         )
     )
+
+
+# Plural router alias for /locations endpoints
+locations_router = APIRouter(prefix="/locations", tags=["Geographic & Location Services"])
+locations_router.add_api_route("", get_location_info, methods=["GET"], response_model=ApiResponse[Dict[str, Any]], dependencies=[Depends(rate_limit_check)])
+locations_router.add_api_route("/search", search_location, methods=["GET"], response_model=ApiResponse[List[LocationSearchResult]], dependencies=[Depends(rate_limit_check)])
+locations_router.add_api_route("/reverse", reverse_location, methods=["GET"], response_model=ApiResponse[ReverseLocationResult], dependencies=[Depends(rate_limit_check)])
+

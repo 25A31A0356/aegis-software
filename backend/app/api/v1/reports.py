@@ -3,11 +3,16 @@ AEGIS UNIFIED DATA CORE - Authoritative Community & Incident Reports API
 /api/v1/reports
 Single Source of Truth for Aegis Web (Portal) and Aegis App (Mobile Alert).
 """
-from typing import Optional, List
+import os
+import uuid
+import re
+from pathlib import Path
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select, desc, func
 from backend.app.database.session import get_db
 from backend.app.database.models import IncidentReport, ReportVote, ActivityEvent
@@ -524,3 +529,81 @@ async def batch_sync_offline_reports(
             processing_version="2.4.0"
         )
     )
+
+
+class MediaUploadResponse(BaseModel):
+    url: str
+    filename: str
+    content_type: str
+    size_bytes: int
+
+
+@router.post("/upload-media", response_model=ApiResponse[MediaUploadResponse], dependencies=[Depends(rate_limit_check)])
+async def upload_report_media(
+    file: UploadFile = File(...),
+    category: Optional[str] = Form(default="report_media")
+):
+    """
+    Secure incident report media upload endpoint for photos, video clips, and damage evidence.
+    Validates file MIME type, size limit (25MB), and assigns collision-safe UUID filenames.
+    """
+    ALLOWED_MIME_TYPES = {
+        "image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif",
+        "video/mp4", "video/quicktime", "video/webm", "video/x-matroska"
+    }
+    MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB
+
+    content_type = (file.content_type or "").lower()
+    if content_type not in ALLOWED_MIME_TYPES:
+        # Check by extension if content_type is generic octet-stream
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        allowed_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".mov", ".webm", ".heic"}
+        if ext not in allowed_exts:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported media format '{content_type}'. Supported: JPEG, PNG, WEBP, GIF, HEIC, MP4, MOV, WEBM."
+            )
+
+    contents = await file.read()
+    size_bytes = len(contents)
+
+    if size_bytes > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size ({size_bytes / (1024*1024):.1f}MB) exceeds maximum permitted limit of 25MB."
+        )
+
+    if size_bytes == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    # Generate safe unique filename
+    raw_ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    safe_ext = re.sub(r'[^a-zA-Z0-9.]', '', raw_ext)
+    unique_filename = f"incident_{uuid.uuid4().hex[:12]}_{int(datetime.now(timezone.utc).timestamp())}{safe_ext}"
+
+    static_dir = Path(__file__).resolve().parent.parent.parent.parent / "static" / "uploads"
+    os.makedirs(static_dir, exist_ok=True)
+    target_path = static_dir / unique_filename
+
+    with open(target_path, "wb") as f:
+        f.write(contents)
+
+    media_url = f"/static/uploads/{unique_filename}"
+    logger.info(f"Successfully stored incident media: {unique_filename} ({size_bytes} bytes)")
+
+    return ApiResponse(
+        success=True,
+        data=MediaUploadResponse(
+            url=media_url,
+            filename=unique_filename,
+            content_type=content_type or "application/octet-stream",
+            size_bytes=size_bytes
+        ),
+        freshness=FreshnessMetadata(status="fresh", age_seconds=0),
+        provenance=ProvenanceMetadata(
+            data_type="report_media_asset",
+            source_authority="AEGIS Secure Asset Vault",
+            processing_version="1.0.0"
+        )
+    )
+

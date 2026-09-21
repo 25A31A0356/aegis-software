@@ -13,6 +13,8 @@ from backend.app.schemas.unified import WeatherTelemetryPayload
 from backend.app.cache.redis_client import CacheManager
 from backend.app.api.deps import rate_limit_check
 from backend.app.providers.adapters.open_meteo import OpenMeteoProvider
+from backend.app.providers.adapters.geographic import GeographicLocationProvider
+
 
 router = APIRouter(prefix="/weather", tags=["Weather Telemetry"])
 
@@ -119,9 +121,13 @@ async def get_weather(
         condition = "Extreme Heatwave Warning"
         condition_code = "heatwave"
 
+    geo_info = GeographicLocationProvider.reverse_geocode_offline(lat, lng)
+    resolved_city = city or geo_info.get("name") or geo_info.get("district") or "Local Station"
+    resolved_state = geo_info.get("state") or "India"
+
     data_payload = {
-        "city_name": city or "Local Station",
-        "state_name": "Maharashtra",
+        "city_name": resolved_city,
+        "state_name": resolved_state,
         "coordinates": [lat, lng],
         "observed_at": norm.observed_at.isoformat(),
         "condition": condition,
@@ -142,6 +148,7 @@ async def get_weather(
         "provenance_type": "official_observation",
         "freshness_status": "fresh"
     }
+
 
     # Cache in Redis
     await CacheManager.set(cache_key, data_payload, ttl_seconds=300)

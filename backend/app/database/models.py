@@ -534,3 +534,35 @@ class UserPreference(Base):
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class DistrictRegistry(Base):
+    """
+    AEGIS Pan-India Official Administrative Spatial Registry.
+    Contains geospatial coordinates, elevations, and administrative metadata
+    for all 28 Indian States, 8 Union Territories, and all 780+ Districts.
+    """
+    __tablename__ = "aegis_district_registry"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    district_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    state_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    country: Mapped[str] = mapped_column(String(50), default="India", nullable=False)
+    is_ut: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    
+    # Coordinates & Spatial data
+    latitude: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    longitude: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    elevation_m: Mapped[float] = mapped_column(Float, default=100.0, nullable=False)
+    timezone: Mapped[str] = mapped_column(String(50), default="Asia/Kolkata", nullable=False)
+    
+    # Metadata & Aliases
+    aliases: Mapped[List[str]] = mapped_column(JSON, default=list, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+    __table_args__ = (
+        Index("idx_district_state_name", "state_name", "district_name"),
+        Index("idx_district_spatial_lat_lng", "latitude", "longitude"),
+    )
+

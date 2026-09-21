@@ -7,11 +7,15 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from backend.app.database.session import async_session_factory
-from backend.app.database.models import DataSource, FieldMapping, AlertRecord, SafeZone, EmergencyServiceEntity
+from backend.app.database.models import (
+    DataSource, FieldMapping, AlertRecord, SafeZone, EmergencyServiceEntity, DistrictRegistry
+)
 from backend.app.core.encryption import SecretVault
 from backend.app.core.config import settings
 from backend.app.utils.logger import logger
 from backend.app.api.v1.emergency_services import CANONICAL_NATIONAL_SERVICES
+from backend.app.providers.adapters.india_districts_data import ALL_INDIA_DISTRICTS
+
 
 
 DEFAULT_SOURCES = [
@@ -429,8 +433,35 @@ async def seed_database():
                 session.add(entity)
                 logger.info(f"Seeded emergency service: {srv['service_code']}")
 
+        # 5. Seed Pan-India 780+ Districts Spatial Registry
+        dist_count = 0
+        for dist in ALL_INDIA_DISTRICTS:
+            stmt = select(DistrictRegistry).where(
+                DistrictRegistry.state_name == dist["state"],
+                DistrictRegistry.district_name == dist["district"]
+            )
+            res = await session.execute(stmt)
+            if not res.scalars().first():
+                dr = DistrictRegistry(
+                    district_name=dist["district"],
+                    state_name=dist["state"],
+                    country=dist.get("country", "India"),
+                    is_ut=dist.get("is_ut", False),
+                    latitude=dist["lat"],
+                    longitude=dist["lng"],
+                    elevation_m=float(dist.get("elevation", 100.0)),
+                    timezone=dist.get("timezone", "Asia/Kolkata"),
+                    aliases=[dist["name"]] if dist["name"] != dist["district"] else []
+                )
+                session.add(dr)
+                dist_count += 1
+
+        if dist_count > 0:
+            logger.info(f"Seeded {dist_count} official Indian districts into spatial registry.")
+
         await session.commit()
         logger.info("Database seeding completed successfully.")
+
 
 
 if __name__ == "__main__":

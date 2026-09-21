@@ -1,6 +1,4 @@
-version: '3.8'
-
-services:
+﻿services:
   # -------------------------------------------------------------
   # PostgreSQL + PostGIS (Spatial & Time-Series Data Store)
   # -------------------------------------------------------------
@@ -12,15 +10,16 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-aegis_db}
       POSTGRES_USER: ${POSTGRES_USER:-aegis_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aegis_secure_password_2026}
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aegis_user -d aegis_db"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aegis_user} -d ${POSTGRES_DB:-aegis_db}"]
+      interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - aegis-network
 
@@ -32,15 +31,16 @@ services:
     container_name: aegis-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 3s
     networks:
       - aegis-network
 
@@ -56,10 +56,16 @@ services:
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://aegis_user:aegis_secure_password_2026@postgres:5432/aegis_db}
+      DATABASE_SYNC_URL: ${DATABASE_SYNC_URL:-postgresql://aegis_user:aegis_secure_password_2026@postgres:5432/aegis_db}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      ENCRYPTION_KEY: ${AEGIS_SECRET_KEY:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
-      JWT_SECRET_KEY: ${JWT_SECRET:-aegis_super_secret_jwt_key_multi_hazard_2026_secure}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:80}
+      AEGIS_SECRET_KEY: ${AEGIS_SECRET_KEY:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
+      JWT_SECRET: ${JWT_SECRET:-aegis_jwt_super_secret_signing_key_production_2026}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@aegis.gov.in}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-AegisAdmin@2026!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:80,http://localhost}
+    expose:
+      - "8000"
     ports:
       - "8000:8000"
     depends_on:
@@ -68,15 +74,16 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
-      interval: 15s
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
     networks:
       - aegis-network
 
   # -------------------------------------------------------------
-  # AEGIS Web Client (React + Vite SPA)
+  # AEGIS Web Client & Nginx Gateway (React + Vite SPA + Proxy)
   # -------------------------------------------------------------
   frontend:
     build:
@@ -85,9 +92,17 @@ services:
     container_name: aegis-frontend
     restart: unless-stopped
     ports:
+      - "80:80"
       - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     networks:
       - aegis-network
 

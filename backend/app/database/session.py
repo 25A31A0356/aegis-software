@@ -1,4 +1,4 @@
-"""
+﻿"""
 AEGIS UNIFIED DATA CORE - Database Session & Connection Management
 Supports async SQLAlchemy 2.0 sessions with PostgreSQL / PostGIS and SQLite fallback for local testing.
 """
@@ -56,6 +56,12 @@ async def init_db():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
     except Exception as e:
+        if settings.ENVIRONMENT == "production":
+            logger.error(
+                f"FATAL: Database connection to PostgreSQL '{db_url}' failed ({e}). "
+                "Production environment strictly requires PostgreSQL/PostGIS. Aborting startup."
+            )
+            raise e
         logger.warning(
             f"Database connection to '{db_url}' failed ({e}). "
             "Falling back to local SQLite ('sqlite+aiosqlite:///./aegis_local.db') for offline development."

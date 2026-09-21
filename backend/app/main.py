@@ -1,7 +1,10 @@
 """
 AEGIS UNIFIED DATA CORE - Main FastAPI Application
 Production-Ready Real-Time Weather & Multi-Hazard Data Infrastructure
+Enhanced with Phase 1 Global Request Tracking & Standard Error Envelopes
 """
+import uuid
+import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,7 +23,7 @@ from backend.app.utils.logger import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup lifecycle
-    logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}...")
+    logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]...")
     await init_db()
     if settings.ENABLE_BACKGROUND_SCHEDULER:
         start_scheduler()
@@ -52,10 +55,18 @@ app.add_middleware(
 )
 
 
-# 2. Security Headers & Redacting Middleware
+# 2. Request ID & Security Headers Middleware
 @app.middleware("http")
-async def security_headers_middleware(request: Request, call_next):
+async def request_tracking_middleware(request: Request, call_next):
+    req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request.state.request_id = req_id
+    start_time = time.time()
+    
     response = await call_next(request)
+    
+    process_time = time.time() - start_time
+    response.headers["X-Request-ID"] = req_id
+    response.headers["X-Process-Time"] = f"{process_time:.4f}s"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -63,16 +74,20 @@ async def security_headers_middleware(request: Request, call_next):
     return response
 
 
-# 3. Exception Handlers
+# 3. Standard Error Envelope Handlers
 @app.exception_handler(AegisCoreException)
 async def aegis_exception_handler(request: Request, exc: AegisCoreException):
+    req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
     return JSONResponse(
         status_code=exc.status_code,
+        headers={"X-Request-ID": req_id},
         content={
             "success": False,
             "error": {
                 "code": exc.code,
                 "message": exc.message,
+                "messageKey": f"errors.{exc.code.lower()}",
+                "requestId": req_id,
                 "details": exc.details
             }
         }
@@ -81,14 +96,23 @@ async def aegis_exception_handler(request: Request, exc: AegisCoreException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    from fastapi.encoders import jsonable_encoder
+    req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    try:
+        errs = jsonable_encoder(exc.errors())
+    except Exception:
+        errs = str(exc.errors())
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        headers={"X-Request-ID": req_id},
         content={
             "success": False,
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": "Invalid request parameters or payload format.",
-                "details": exc.errors()
+                "messageKey": "errors.validation_error",
+                "requestId": req_id,
+                "details": errs
             }
         }
     )
@@ -96,13 +120,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
     return JSONResponse(
         status_code=exc.status_code,
+        headers={"X-Request-ID": req_id},
         content={
             "success": False,
             "error": {
                 "code": f"HTTP_{exc.status_code}",
                 "message": exc.detail if isinstance(exc.detail, str) else "Request processing error.",
+                "messageKey": f"errors.http_{exc.status_code}",
+                "requestId": req_id,
                 "details": exc.detail if not isinstance(exc.detail, str) else None
             }
         }
@@ -111,14 +139,18 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled Exception on {request.method} {request.url.path}: {str(exc)}")
+    req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    logger.error(f"[{req_id}] Unhandled Exception on {request.method} {request.url.path}: {str(exc)}")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        headers={"X-Request-ID": req_id},
         content={
             "success": False,
             "error": {
                 "code": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected error occurred while processing emergency telemetry."
+                "message": "An unexpected error occurred while processing emergency telemetry.",
+                "messageKey": "errors.internal_server_error",
+                "requestId": req_id
             }
         }
     )
@@ -131,7 +163,17 @@ async def root_health(db: AsyncSession = Depends(get_db)):
     return await check_overall_health(db)
 
 
-# 5. Include Master API v1 Router
+import os
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+# 5. Static Files Directory Mount for Incident Media
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+UPLOADS_DIR = STATIC_DIR / "uploads"
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# 6. Include Master API v1 Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Also mount on /api for seamless backward compatibility with existing frontend

@@ -489,7 +489,7 @@ erDiagram
 - **The AEGIS Solution**:
   1. **Unified Multi-Source Gateway**: Ingests and correlates 8 national data streams in real time.
   2. **Physics-Grounded AI & Correlation**: Automated risk fusion (0–100), CAPE thunderstorm nowcasting, and SCS-CN urban flood modeling.
-  3. **Rapido-Style Geospatial SOS Grid**: 10 km / 20 km proximity matching dispatching nearby volunteers and NDRF units.
+  3. **Rapido-Style Geospatial SOS MAP**: 10 km / 20 km proximity matching dispatching nearby volunteers and NDRF units.
   4. **100% Offline Mobile Calling & GPS SMS**: Native telephony intents and satellite GNSS text sharing.
 
 ---

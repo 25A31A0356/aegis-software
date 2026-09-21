@@ -1,4 +1,4 @@
-"""
+﻿"""
 AEGIS UNIFIED DATA CORE - Redis Cache & In-Memory Fallback Client
 Provides high-performance caching for live observations, telemetry streams,
 distributed locks, and rate limiting with automatic in-memory fallback.
@@ -19,20 +19,22 @@ class CacheManager:
 
     @classmethod
     async def get_redis(cls) -> Optional[aioredis.Redis]:
-        if cls._redis is None:
+        if cls._redis is None or not cls._is_redis_connected:
             try:
-                cls._redis = aioredis.from_url(
+                client = aioredis.from_url(
                     settings.REDIS_URL,
                     encoding="utf-8",
                     decode_responses=True,
-                    socket_connect_timeout=2.0
+                    socket_connect_timeout=3.0
                 )
-                await cls._redis.ping()
+                await client.ping()
+                cls._redis = client
                 cls._is_redis_connected = True
-                logger.info("Connected to Redis cache successfully.")
+                logger.info(f"Connected to Redis cache at {settings.REDIS_URL} successfully.")
             except Exception as e:
+                cls._redis = None
                 cls._is_redis_connected = False
-                logger.warning(f"Redis unavailable ({e}). Using robust In-Memory Cache fallback.")
+                logger.warning(f"Redis unavailable at {settings.REDIS_URL} ({e}). Using In-Memory Cache fallback.")
         return cls._redis if cls._is_redis_connected else None
 
     @classmethod
@@ -44,7 +46,8 @@ class CacheManager:
                 val = await r.get(key)
                 return json.loads(val) if val else None
         except Exception:
-            pass
+            cls._is_redis_connected = False
+            cls._redis = None
 
         # In-memory fallback
         now = time.time()
@@ -67,7 +70,8 @@ class CacheManager:
                 await r.set(key, serialized, ex=ttl)
                 return True
         except Exception:
-            pass
+            cls._is_redis_connected = False
+            cls._redis = None
 
         # In-memory fallback
         cls._memory_cache[key] = value
@@ -82,7 +86,8 @@ class CacheManager:
             if r:
                 await r.delete(key)
         except Exception:
-            pass
+            cls._is_redis_connected = False
+            cls._redis = None
         cls._memory_cache.pop(key, None)
         cls._memory_expiry.pop(key, None)
         return True
@@ -96,5 +101,7 @@ class CacheManager:
                 await r.ping()
                 return {"status": "HEALTHY", "engine": "Redis", "connected": True}
         except Exception as e:
+            cls._redis = None
+            cls._is_redis_connected = False
             return {"status": "DEGRADED", "engine": "InMemoryFallback", "error": str(e), "connected": False}
-        return {"status": "HEALTHY", "engine": "InMemoryFallback", "connected": True}
+        return {"status": "DEGRADED", "engine": "InMemoryFallback", "connected": False}
