@@ -57,6 +57,11 @@ class WeatherTelemetryPayload(BaseModel):
     source: str = "AEGIS Data Core"
     provenance_type: str = "official_observation"
     freshness_status: str = "fresh"
+    data_age_minutes: int = 0
+    confidence_score: float = 0.92
+    model_agreement_score: float = 0.88
+    primary_source: str = "IMD & Open-Meteo HRRR"
+    forecast_valid_until: Optional[str] = None
 
 
 class AlertItemSchema(BaseModel):
@@ -148,3 +153,35 @@ class RiskEvaluationResponse(BaseModel):
     is_aegis_derived: bool = True
     provenance: str = "AEGIS Multi-Source Correlation Engine"
     evaluated_at: str
+
+
+class EnvironmentalRiskFactor(BaseModel):
+    rainfall_severity: float = 0.0
+    wind_shear_intensity: float = 0.0
+    seismic_proximity_intensity: float = 0.0
+    flood_inundation_risk: float = 0.0
+
+class EnvironmentalRisk(BaseModel):
+    score: float = Field(..., ge=0.0, le=100.0)
+    classification: str = "MODERATE"
+    factors: EnvironmentalRiskFactor
+    primary_hazard: str = "WEATHER"
+    confidence: float = 0.90
+
+class CivilianIncidentLoad(BaseModel):
+    verified_reports_15km: int = 0
+    active_hazard_zones: int = 1
+    unverified_alerts_count: int = 0
+
+class EmergencyResponseLoad(BaseModel):
+    active_sos_count: int = 0
+    available_responders_count: int = 12
+    dispatch_ratio: float = 0.0
+    average_responder_eta_minutes: float = 8.5
+
+class DecoupledRiskResponse(BaseModel):
+    environmental_risk: EnvironmentalRisk
+    civilian_incident_load: CivilianIncidentLoad
+    emergency_response_load: EmergencyResponseLoad
+    calculated_at: str
+    provenance_source: str = "AEGIS Decoupled Multi-Hazard Intelligence Engine"
