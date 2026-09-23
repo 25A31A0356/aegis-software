@@ -1,0 +1,55 @@
+# AEGIS MASTER CLOUD PRODUCTION TOPOLOGY
+cluster_name: "aegis-prod-mumbai"
+region: "ap-south-1"
+domain: "aegisalert.org"
+
+infrastructure:
+  vpc_cidr: "10.0.0.0/16"
+  availability_zones:
+    - "ap-south-1a"
+    - "ap-south-1b"
+    - "ap-south-1c"
+  
+database:
+  engine: "aurora-postgresql"
+  version: "16.2"
+  extensions:
+    - "postgis"
+    - "postgis_raster"
+    - "pgcrypto"
+  instance_class: "db.r6g.xlarge"
+  min_capacity: 2
+  max_capacity: 16
+  backup_retention_days: 35
+  storage_encrypted: true
+
+cache:
+  engine: "redis"
+  cluster_mode: "enabled"
+  node_type: "cache.r6g.large"
+  num_cache_clusters: 3
+  multi_az: true
+
+services_spec:
+  api:
+    cpu: 2048
+    memory: 4096
+    desired_count: 4
+    min_count: 2
+    max_count: 20
+    target_cpu_utilization: 70
+    target_memory_utilization: 80
+
+  web:
+    cpu: 1024
+    memory: 2048
+    desired_count: 3
+    min_count: 2
+    max_count: 10
+
+  workers:
+    cpu: 2048
+    memory: 4096
+    desired_count: 3
+    min_count: 2
+    max_count: 8

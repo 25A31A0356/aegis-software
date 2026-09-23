@@ -1,0 +1,21 @@
+# AEGIS MASTER CLOUD STAGING TOPOLOGY
+cluster_name: "aegis-staging-mumbai"
+region: "ap-south-1"
+domain: "staging.aegisalert.org"
+
+infrastructure:
+  vpc_cidr: "10.1.0.0/16"
+  availability_zones:
+    - "ap-south-1a"
+    - "ap-south-1b"
+
+database:
+  engine: "postgres"
+  version: "16.2"
+  instance_class: "db.t4g.medium"
+  storage_encrypted: true
+
+cache:
+  engine: "redis"
+  node_type: "cache.t4g.medium"
+  num_cache_clusters: 1

@@ -1,0 +1,59 @@
+# AEGIS MASTER VERSION REGISTRY
+# Canonical production and staging versions for all sub-services
+version_manifest_schema: "1.0.0"
+last_updated: "2026-09-24T00:15:00Z"
+environment: "production"
+
+services:
+  api:
+    version: "3.2.0"
+    image: "711234567890.dkr.ecr.ap-south-1.amazonaws.com/aegis-api:3.2.0"
+    git_sha: "HEAD"
+    port: 8000
+    health_endpoint: "/health/ready"
+
+  web:
+    version: "2.4.1"
+    image: "711234567890.dkr.ecr.ap-south-1.amazonaws.com/aegis-web:2.4.1"
+    git_sha: "HEAD"
+    port: 80
+    health_endpoint: "/"
+
+  realtime:
+    version: "1.7.0"
+    image: "711234567890.dkr.ecr.ap-south-1.amazonaws.com/aegis-realtime:1.7.0"
+    git_sha: "HEAD"
+    port: 8001
+    health_endpoint: "/health/live"
+
+  ingestion:
+    version: "1.8.0"
+    image: "711234567890.dkr.ecr.ap-south-1.amazonaws.com/aegis-ingestion:1.8.0"
+    git_sha: "HEAD"
+    workers: 4
+
+  ai-engine:
+    version: "1.5.2"
+    image: "711234567890.dkr.ecr.ap-south-1.amazonaws.com/aegis-ai-engine:1.5.2"
+    git_sha: "HEAD"
+    workers: 2
+
+  sos-engine:
+    version: "2.1.0"
+    image: "711234567890.dkr.ecr.ap-south-1.amazonaws.com/aegis-sos-engine:2.1.0"
+    git_sha: "HEAD"
+    workers: 4
+
+  mobile:
+    version: "2.3.1"
+    bundle_version: "2026092401"
+    min_supported_version: "2.0.0"
+    ota_channel: "production"
+
+history:
+  - version: "3.1.9"
+    deployed_at: "2026-09-20T10:00:00Z"
+    status: "SUPERSEDED"
+  - version: "3.2.0"
+    deployed_at: "2026-09-24T00:15:00Z"
+    status: "ACTIVE"

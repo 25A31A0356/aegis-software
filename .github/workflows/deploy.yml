@@ -1,0 +1,49 @@
+name: AEGIS Master Production Deployment
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Target Environment (staging/production)'
+        required: true
+        default: 'staging'
+
+jobs:
+  build-and-push:
+    name: Build & Push ECR Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Extract Release Tag
+        id: vars
+        run: echo "TAG=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Backend Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.TAG || 'latest' }}
+        run: |
+          docker build -t $ECR_REGISTRY/aegis-api:$TAG -f docker/Dockerfile.api .
+          docker push $ECR_REGISTRY/aegis-api:$TAG
+
+      - name: Build and Push Web Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.TAG || 'latest' }}
+        run: |
+          docker build -t $ECR_REGISTRY/aegis-web:$TAG -f docker/Dockerfile.web .
+          docker push $ECR_REGISTRY/aegis-web:$TAG
